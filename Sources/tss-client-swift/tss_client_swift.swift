@@ -1,4 +1,4 @@
-public struct tss_client_swift2 {
+public struct tss_client_swift {
     public private(set) var text = "Hello, World!"
 
     public init() {
