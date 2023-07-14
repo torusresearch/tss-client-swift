@@ -12,6 +12,26 @@ let CURVE_N: String = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD
 var modulusValueUnsigned = BigUInt(CURVE_N, radix: 16)!
 var modulusValueSigned = BigInt(CURVE_N, radix: 16)!
 
+struct Point {
+    var x: String
+    var y: String
+}
+
+func publicKey(x: String, y: String) -> Data {
+//    let coordinateLength = 32 // Length for each coordinate in bytes
+    var data = Data()
+    data.append(0x04) // Uncompressed key prefix
+    
+    if let xData = Data(hexString: x.padLeft(padChar: "0", count: 64)),
+       let yData = Data(hexString: y.padLeft(padChar: "0", count: 64)) {
+        data.append(xData)
+        data.append(yData)
+    }
+        
+    return data
+//    return try! PublicKey(data: data, network: .mainnet)
+}
+
 func getLagrangeCoeffs(_ _allIndexes: [BigInt], _ _myIndex: BigInt, _ _target: BigInt = BigInt(0)) -> BigInt {
     
     // You have to replace the 'placeholder' with the actual logic to get 'curve.n' value.
