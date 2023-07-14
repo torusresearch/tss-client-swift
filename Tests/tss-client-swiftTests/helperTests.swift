@@ -35,9 +35,9 @@ final class helpersTests: XCTestCase {
     }
     
     func testGetDKLSCoeff () throws {
-        let result = getDKLSCoeff(isUser: true, participatingServerIndexes: [BigInt(100), BigInt(200)], userTSSIndex: BigInt(10))
-        print (result)
+        let result = getDKLSCoeff(isUser: true, participatingServerIndexes: [BigInt(100), BigInt(200)], userTSSIndex: BigInt(100))
         let expected = Data(hexString: "a57eb50295fad40a57eb50295fad40a4ac66b301bc4dfafaaa8d2b05b28fae1")
+        print(expected!.toHexString(), result.serialize().hexString, result.serialize().toHexString())
         XCTAssertEqual(result.serialize().suffix(32), expected)
     }
     

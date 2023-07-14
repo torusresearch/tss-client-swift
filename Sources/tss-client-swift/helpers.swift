@@ -89,8 +89,6 @@ func getDKLSCoeff(isUser: Bool, participatingServerIndexes: [BigInt], userTSSInd
 
     let userPartyIndex = BigInt(parties.count + 1)
     parties.append(userPartyIndex)
-
-    // You have to replace the 'placeholder' with the actual logic to get 'curve.n' value.
     let curve_n = modulusValueSigned
 
     let additiveCoeff = getAdditiveCoeff(isUser: isUser, participatingServerIndexes: participatingServerIndexes, userTSSIndex: userTSSIndex, serverIndex: serverIndex)
