@@ -12,9 +12,16 @@ let CURVE_N: String = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD
 var modulusValueUnsigned = BigUInt(CURVE_N, radix: 16)!
 var modulusValueSigned = BigInt(CURVE_N, radix: 16)!
 
-struct Point {
+public struct Point {
     var x: String
     var y: String
+}
+
+enum TSSKeyError: Error {
+    case invalidPublicKey
+    case failedToProcessTerm
+    case failedToSerialize
+    case failedToCombineKeys
 }
 
 func publicKey(x: String, y: String) -> Data {
@@ -122,15 +129,51 @@ func getDKLSCoeff(isUser: Bool, participatingServerIndexes: [BigInt], userTSSInd
     }
 }
 
-func getTSSPubKey(dkgPubKey: Data, userSharePubKey: Data, userTSSIndex: BigInt) -> Data {
+//func getTSSPubKey(dkgPubKey: Data, userSharePubKey: Data, userTSSIndex: BigInt) -> Data {
+//    let serverLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], BigInt(1))
+//    let userLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], userTSSIndex)
+//
+//    var serverTerm = SECP256K1.parsePublicKey(serializedKey: dkgPubKey)!
+//    var userTerm = SECP256K1.parsePublicKey(serializedKey: userSharePubKey)!
+//
+//    serverTerm = SECP256K1.ecdh(pubKey: serverTerm, privateKey: try! Data.ensureDataLengthIs32Bytes(serverLagrangeCoeff.serialize()))!
+//    userTerm = SECP256K1.ecdh(pubKey: userTerm, privateKey: try! Data.ensureDataLengthIs32Bytes(userLagrangeCoeff.serialize()))!
+//    let combination = SECP256K1.combineSerializedPublicKeys(keys: [SECP256K1.serializePublicKey(publicKey: &serverTerm)!, SECP256K1.serializePublicKey(publicKey: &userTerm)!]);
+//    return combination!
+//}
+
+func getTSSPubKey(dkgPubKey: Data, userSharePubKey: Data, userTSSIndex: BigInt) throws -> Data {
     let serverLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], BigInt(1))
     let userLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], userTSSIndex)
         
-    var serverTerm = SECP256K1.parsePublicKey(serializedKey: dkgPubKey)!
-    var userTerm = SECP256K1.parsePublicKey(serializedKey: userSharePubKey)!
+    guard let serverTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: dkgPubKey),
+          let userTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: userSharePubKey) else {
+        throw TSSKeyError.invalidPublicKey
+    }
+    
+    var serverTerm = serverTermUnprocessed
+    var userTerm = userTermUnprocessed
 
-    serverTerm = SECP256K1.ecdh(pubKey: serverTerm, privateKey: serverLagrangeCoeff.serialize())!
-    userTerm = SECP256K1.ecdh(pubKey: userTerm, privateKey: userLagrangeCoeff.serialize())!
-    let combination = SECP256K1.combineSerializedPublicKeys(keys: [SECP256K1.serializePublicKey(publicKey: &serverTerm)!, SECP256K1.serializePublicKey(publicKey: &userTerm)!]);
-    return combination!
+    let serverLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(serverLagrangeCoeff.serialize())
+    let userLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(userLagrangeCoeff.serialize())
+
+    guard let serverTermProcessed = SECP256K1.ecdh(pubKey: serverTerm, privateKey: serverLagrangeCoeffData),
+          let userTermProcessed = SECP256K1.ecdh(pubKey: userTerm, privateKey: userLagrangeCoeffData) else {
+        throw TSSKeyError.failedToProcessTerm
+    }
+
+    serverTerm = serverTermProcessed
+    userTerm = userTermProcessed
+
+    guard let serializedServerTerm = SECP256K1.serializePublicKey(publicKey: &serverTerm),
+          let serializedUserTerm = SECP256K1.serializePublicKey(publicKey: &userTerm) else {
+        throw TSSKeyError.failedToSerialize
+    }
+
+    guard let combination = SECP256K1.combineSerializedPublicKeys(keys: [serializedServerTerm, serializedUserTerm]) else {
+        throw TSSKeyError.failedToCombineKeys
+    }
+
+    return combination
 }
+

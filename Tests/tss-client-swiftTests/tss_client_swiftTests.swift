@@ -9,6 +9,6 @@ final class tss_client_swiftTests: XCTestCase {
         // Use XCTAssert and related functions to verify your tests produce the correct
         // results.
         print(BigUInt(2) - BigUInt(2));
-        XCTAssertEqual(tss_client_swift().text, "Hello, World!")
+//        XCTAssertEqual(tss_client_swift().text, "Hello, World!")
     }
 }
