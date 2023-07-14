@@ -142,7 +142,7 @@ public extension Data {
     //        return uintRepresentation
     //    }
     
-    public init?(hexString: String) {
+    init?(hexString: String) {
         let length = hexString.count / 2
         var data = Data(capacity: length)
         for i in 0 ..< length {

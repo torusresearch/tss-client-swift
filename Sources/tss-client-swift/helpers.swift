@@ -17,7 +17,7 @@ func getLagrangeCoeffs(_ _allIndexes: [BigInt], _ _myIndex: BigInt, _ _target: B
     // You have to replace the 'placeholder' with the actual logic to get 'curve.n' value.
     let curve_n = modulusValueSigned
 
-    var allIndexes: [BigInt] = _allIndexes
+    let allIndexes: [BigInt] = _allIndexes
     let myIndex: BigInt = _myIndex
     let target: BigInt = _target
     var upper = BigInt(1)
@@ -102,15 +102,15 @@ func getDKLSCoeff(isUser: Bool, participatingServerIndexes: [BigInt], userTSSInd
     }
 }
 
-//func getTSSPubKey(dkgPubKey: Data, userSharePubKey: String, userTSSIndex: BigInt) -> ECPoint {
-//    let serverLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], BigInt(1))
-//    let userLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], userTSSIndex)
-//
-//    var serverTerm = ECPoint(dkgPubKey)
-//    serverTerm = serverTerm.mul(serverLagrangeCoeff)
-//
-//    var userTerm = ECPoint(userSharePubKey)
-//    userTerm = userTerm.mul(userLagrangeCoeff)
-//
-//    return serverTerm.add(userTerm)
-//}
+func getTSSPubKey(dkgPubKey: Data, userSharePubKey: Data, userTSSIndex: BigInt) -> Data {
+    let serverLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], BigInt(1))
+    let userLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], userTSSIndex)
+        
+    var serverTerm = SECP256K1.parsePublicKey(serializedKey: dkgPubKey)!
+    var userTerm = SECP256K1.parsePublicKey(serializedKey: userSharePubKey)!
+
+    serverTerm = SECP256K1.ecdh(pubKey: serverTerm, privateKey: serverLagrangeCoeff.serialize())!
+    userTerm = SECP256K1.ecdh(pubKey: userTerm, privateKey: userLagrangeCoeff.serialize())!
+    let combination = SECP256K1.combineSerializedPublicKeys(keys: [SECP256K1.serializePublicKey(publicKey: &serverTerm)!, SECP256K1.serializePublicKey(publicKey: &userTerm)!]);
+    return combination!
+}
