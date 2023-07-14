@@ -25,7 +25,7 @@ final class helpersTests: XCTestCase {
     }
     
     func testGetDenormaliseCoeff () throws {
-        let result = getDenormaliseCoeff(party: BigInt(100), parties: [BigInt(100), BigInt(200)])
+        let result = try! getDenormaliseCoeff(party: BigInt(100), parties: [BigInt(100), BigInt(200)])
         let expected = "7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1".addLeading0sForLength64()
         XCTAssertEqual(result.serialize().suffix(32).toHexString(), expected)
     }

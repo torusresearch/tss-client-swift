@@ -22,6 +22,7 @@ enum TSSKeyError: Error {
     case failedToProcessTerm
     case failedToSerialize
     case failedToCombineKeys
+    case General
 }
 
 func publicKey(x: String, y: String) -> Data {
@@ -78,11 +79,11 @@ func getAdditiveCoeff(isUser: Bool, participatingServerIndexes: [BigInt], userTS
 }
 
 
-func getDenormaliseCoeff(party: BigInt, parties: [BigInt]) -> BigInt {
+func getDenormaliseCoeff(party: BigInt, parties: [BigInt]) throws -> BigInt {
 
     // Check if party exists in parties
     if !parties.contains(party) {
-        fatalError("party \(party) not found in parties \(parties)")
+        throw TSSKeyError.General
     }
 
     let curve_n = modulusValueSigned
@@ -121,10 +122,10 @@ func getDKLSCoeff(isUser: Bool, participatingServerIndexes: [BigInt], userTSSInd
     let additiveCoeff = getAdditiveCoeff(isUser: isUser, participatingServerIndexes: participatingServerIndexes, userTSSIndex: userTSSIndex, serverIndex: serverIndex)
 
     if isUser {
-        let denormaliseCoeff = getDenormaliseCoeff(party: userPartyIndex, parties: parties)
+        let denormaliseCoeff = try! getDenormaliseCoeff(party: userPartyIndex, parties: parties)
         return (denormaliseCoeff * additiveCoeff).modulus(curve_n)
     } else {
-        let denormaliseCoeff = getDenormaliseCoeff(party: serverPartyIndex, parties: parties)
+        let denormaliseCoeff = try! getDenormaliseCoeff(party: serverPartyIndex, parties: parties)
         return (denormaliseCoeff * additiveCoeff).modulus(curve_n)
     }
 }
