@@ -26,7 +26,6 @@ enum TSSKeyError: Error {
 }
 
 func publicKey(x: String, y: String) -> Data {
-//    let coordinateLength = 32 // Length for each coordinate in bytes
     var data = Data()
     data.append(0x04) // Uncompressed key prefix
     
@@ -37,7 +36,6 @@ func publicKey(x: String, y: String) -> Data {
     }
         
     return data
-//    return try! PublicKey(data: data, network: .mainnet)
 }
 
 func getLagrangeCoeffs(_ _allIndexes: [BigInt], _ _myIndex: BigInt, _ _target: BigInt = BigInt(0)) -> BigInt {
@@ -130,19 +128,6 @@ func getDKLSCoeff(isUser: Bool, participatingServerIndexes: [BigInt], userTSSInd
     }
 }
 
-//func getTSSPubKey(dkgPubKey: Data, userSharePubKey: Data, userTSSIndex: BigInt) -> Data {
-//    let serverLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], BigInt(1))
-//    let userLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], userTSSIndex)
-//
-//    var serverTerm = SECP256K1.parsePublicKey(serializedKey: dkgPubKey)!
-//    var userTerm = SECP256K1.parsePublicKey(serializedKey: userSharePubKey)!
-//
-//    serverTerm = SECP256K1.ecdh(pubKey: serverTerm, privateKey: try! Data.ensureDataLengthIs32Bytes(serverLagrangeCoeff.serialize()))!
-//    userTerm = SECP256K1.ecdh(pubKey: userTerm, privateKey: try! Data.ensureDataLengthIs32Bytes(userLagrangeCoeff.serialize()))!
-//    let combination = SECP256K1.combineSerializedPublicKeys(keys: [SECP256K1.serializePublicKey(publicKey: &serverTerm)!, SECP256K1.serializePublicKey(publicKey: &userTerm)!]);
-//    return combination!
-//}
-
 func getTSSPubKey(dkgPubKey: Data, userSharePubKey: Data, userTSSIndex: BigInt) throws -> Data {
     let serverLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], BigInt(1))
     let userLagrangeCoeff = getLagrangeCoeffs([BigInt(1), userTSSIndex], userTSSIndex)
@@ -177,4 +162,21 @@ func getTSSPubKey(dkgPubKey: Data, userSharePubKey: Data, userTSSIndex: BigInt) 
 
     return combination
 }
+
+func createSockets(wsEndpoints: [String?], sessionId: String) -> [WebSocketManager?] {
+    return wsEndpoints.map { wsEndpoint in
+        guard let wsEndpoint = wsEndpoint else {
+            return nil
+        }
+        
+        let webSocketManager = WebSocketManager(url: wsEndpoint,
+                                                path: "/tss/socket.io",
+                                                sessionId: sessionId,
+                                                withCredentials: true,
+                                                reconnectionDelayMax: 10000,
+                                                reconnectionAttempts: 0)
+        return webSocketManager
+    }
+}
+
 
