@@ -22,7 +22,7 @@ final class helpersTests: XCTestCase {
     func testGetAdditiveCoeff () throws {
         let result = getAdditiveCoeff(isUser: true, participatingServerIndexes: [BigInt(100), BigInt(200), BigInt(300)], userTSSIndex: BigInt(10))
         print(result.serialize().hexString)
-        let expected = Data(hexString: "71c71c71c71c71c71c71c71c71c71c7136869b1131759c8c55410d93eac2c7ab>")
+        let expected = Data(hexString: "71c71c71c71c71c71c71c71c71c71c7136869b1131759c8c55410d93eac2c7ab")
         XCTAssertEqual(result.serialize().suffix(32), expected)
     }
     
@@ -30,14 +30,14 @@ final class helpersTests: XCTestCase {
     func testGetDenormaliseCoeff () throws {
         let result = getDenormaliseCoeff(party: BigInt(100), parties: [BigInt(100), BigInt(200)])
         print (result)
-        let expected = Data(hexString: "7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1>")
+        let expected = Data(hexString: "7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1")
         XCTAssertEqual(result.serialize().suffix(32), expected)
     }
     
     func testGetDKLSCoeff () throws {
         let result = getDKLSCoeff(isUser: true, participatingServerIndexes: [BigInt(100), BigInt(200)], userTSSIndex: BigInt(10))
         print (result)
-        let expected = Data(hexString: "a57eb50295fad40a57eb50295fad40a4ac66b301bc4dfafaaa8d2b05b28fae1>")
+        let expected = Data(hexString: "a57eb50295fad40a57eb50295fad40a4ac66b301bc4dfafaaa8d2b05b28fae1")
         XCTAssertEqual(result.serialize().suffix(32), expected)
     }
     

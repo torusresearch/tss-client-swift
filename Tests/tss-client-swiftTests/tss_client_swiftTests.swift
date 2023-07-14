@@ -8,7 +8,7 @@ final class tss_client_swiftTests: XCTestCase {
         // This is an example of a functional test case.
         // Use XCTAssert and related functions to verify your tests produce the correct
         // results.
-        print(BigUInt(1) - BigUInt(2));
+        print(BigUInt(2) - BigUInt(2));
         XCTAssertEqual(tss_client_swift().text, "Hello, World!")
     }
 }
