@@ -20,8 +20,23 @@ final class dklsTests: XCTestCase {
     func testUtilities() throws {
         let hashed = try Utilities.hashEncode(message: "Hello World")
         XCTAssertEqual(hashed,"pZGm1Av0IEBKARczz7exkNYsZb8LzaMrV7J32a2fFG4=")
+        
         let batchSize = try Utilities.batchSize()
         XCTAssertGreaterThan(batchSize, 0)
+        
+        let hashOnly = true
+        var hash = "pZGm1Av0IEBKARczz7exkNYsZb8LzaMrV7J32a2fFG4="
+        var precompute = try Precompute(precompute: "TSbPQiau1tJoG6b2flNKXXb8EIGqgaAZ7PkuWJaNcKEGp8NkxS4XSrAF4gZlRmj4E+L9SOZ828DsusCUjUh8DA==#Q+aH50RJf1Aw2YHHyLc924drM8gqW9/lwxP5JTcejvM=#rkq/wFk2XPl3zv0XkHGyt4Duru9ao8zbmt6I4zorEXc=#vyx89I4ypkFtqi062u7xOCq35DZgwp6Gfo2VFoQpFzc=")
+        let signature_fragment = try Utilities.local_sign(message: hash, hashOnly: hashOnly, precompute: precompute)
+        XCTAssertEqual(signature_fragment, "JLphVR9bO7pNnmL6dRQARixCwk3P07tsWu7TETIXNF0=")
+        
+    
+        hash = "pZGm1Av0IEBKARczz7exkNYsZb8LzaMrV7J32a2fFG4="
+        precompute = try Precompute(precompute: "TSbPQiau1tJoG6b2flNKXXb8EIGqgaAZ7PkuWJaNcKEGp8NkxS4XSrAF4gZlRmj4E+L9SOZ828DsusCUjUh8DA==#Q+aH50RJf1Aw2YHHyLc924drM8gqW9/lwxP5JTcejvM=#rkq/wFk2XPl3zv0XkHGyt4Duru9ao8zbmt6I4zorEXc=#vyx89I4ypkFtqi062u7xOCq35DZgwp6Gfo2VFoQpFzc=")
+        let fragments = try SignatureFragments(input: "JLphVR9bO7pNnmL6dRQARixCwk3P07tsWu7TETIXNF0=,fcMuarM6YL0MR5j1kDxFw+q6OyKigW8n5sZnBGvzRZo=,BBJdnq8dFqFCXaiJZSiUzGANUDxlP8UXAenW9gfKLvk=")
+        let pubKey = "mbkxU1rQ0QkUzcFBUSSGh8TSaO2ndoHBXiIJexxa26DK430ZcOQIkYyWYgeRaIvyZo7oQliNd6PquEcIE2daUw=="
+        let sig = try Utilities.local_verify(message: hash, hashOnly: hashOnly, precompute: precompute, signatureFragments: fragments, pubKey: pubKey)
+        XCTAssertEqual(sig, "TSbPQiau1tJoG6b2flNKXXb8EIGqgaAZ7PkuWJaNcKGmj+1egbKzGJxDpHlqeNrWdwpNrNeU76tDnxELpdSo8A==")
     }
     
     func testPrecompute() throws {

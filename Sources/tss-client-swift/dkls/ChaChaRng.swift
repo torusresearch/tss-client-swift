@@ -9,7 +9,7 @@ public final class ChaChaRng {
     public init() throws {
         let stateBytes = SECP256K1.generatePrivateKey()
         if stateBytes == nil {
-            throw DKLSError("Error generating  random bytes for generator initialization")
+            throw DKLSError("Error generating random bytes for generator initialization")
         }
         let state = stateBytes!.base64EncodedString()
         
