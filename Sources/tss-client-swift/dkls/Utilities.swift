@@ -30,7 +30,7 @@ public final class Utilities {
         return value
     }
     
-    public static func local_sign(message: String, hashOnly: Bool, precompute: Precompute) throws -> String {
+    public static func localSign(message: String, hashOnly: Bool, precompute: Precompute) throws -> String {
         var errorCode: Int32 = -1
         let messagePointer = UnsafePointer<Int8>((message as NSString).utf8String)
         let precomputeString = try precompute.export()
@@ -47,7 +47,7 @@ public final class Utilities {
         return value
     }
     
-    public static func local_verify(message: String, hashOnly: Bool, precompute: Precompute, signatureFragments: SignatureFragments, pubKey: String) throws -> String {
+    public static func localVerify(message: String, hashOnly: Bool, precompute: Precompute, signatureFragments: SignatureFragments, pubKey: String) throws -> String {
         var errorCode: Int32 = -1
         let messagePointer = UnsafePointer<Int8>((message as NSString).utf8String)
         let r = try precompute.getR()
