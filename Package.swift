@@ -19,9 +19,16 @@ let package = Package(
         .package(url: "https://github.com/pusher/NWWebSocket.git", .upToNextMajor(from: "0.5.3")),
     ],
     targets: [
+        .binaryTarget(name: "libdkls",
+                      path: "Sources/libdkls/libdkls.xcframework"
+        ),
+        .target(name: "lib",
+               dependencies: ["libdkls"],
+                path: "Sources/libdkls"
+        ),
         .target(
             name: "tss-client-swift",
-            dependencies: ["BigInt", "CryptoSwift", "secp256k1", "NWWebSocket"]),
+            dependencies: ["BigInt", "CryptoSwift", "secp256k1", "NWWebSocket", "lib"]),
         .testTarget(
             name: "tss-client-swiftTests",
             dependencies: ["tss-client-swift", "BigInt"]),
