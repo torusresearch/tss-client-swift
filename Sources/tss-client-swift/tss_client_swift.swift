@@ -188,7 +188,7 @@ public class TSSClient {
         return try SignatureFragments(input: "myFragment, each, other, fragment")
     }
     
-    // returns a full signature
+    // returns a full signature using fragments and precompute
     public func verifyWithPrecompute(message: String, hashOnly: Bool, precompute: Precompute, fragments: SignatureFragments, pubKey: String) throws -> String {
         return try Utilities.localVerify(message: message, hashOnly: hashOnly, precompute: precompute, signatureFragments: fragments, pubKey: pubKey)
     }
