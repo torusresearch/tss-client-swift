@@ -10,6 +10,7 @@ public class WebSocketManager: WebSocketConnectionDelegate {
     let path: String
     let sessionId: String
     let withCredentials: Bool
+    var connected: Bool = false
     let reconnectionDelayMax: TimeInterval
     let reconnectionAttempts: Int
 
@@ -59,10 +60,12 @@ public class WebSocketManager: WebSocketConnectionDelegate {
     // WebSocketConnectionDelegate methods
     public func webSocketDidConnect(connection: WebSocketConnection) {
         self.trigger("connected", data: true)
+        self.connected = true;
     }
     
     public func webSocketDidDisconnect(connection: WebSocketConnection, closeCode: NWProtocolWebSocket.CloseCode, reason: Data?) {
         self.trigger("disconnected", data: closeCode)
+        self.connected = false;
     }
     
     public func webSocketViabilityDidChange(connection: WebSocketConnection, isViable: Bool) {
