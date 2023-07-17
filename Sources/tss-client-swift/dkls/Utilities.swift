@@ -64,4 +64,8 @@ public final class Utilities {
         dkls_string_free(cast)
         return value
     }
+    
+    public static func CStringFree(ptr: UnsafeMutablePointer<CChar>?) {
+        dkls_string_free(ptr)
+    }
 }
