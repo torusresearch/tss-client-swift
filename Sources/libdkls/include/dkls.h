@@ -24,7 +24,8 @@
         void signature_fragments_free(struct Sigfrags* fragments);
 
         //Counterparties
-        struct Counterparties *counterparties(const char* parties, int* error_code);
+        struct Counterparties *counterparties_from_string(const char* parties, int* error_code);
+        const char* counterparties_to_string(struct Counterparties* fragments, int* error_code);
         void counterparties_free(struct Counterparties* parties);
 
         //MsgComm

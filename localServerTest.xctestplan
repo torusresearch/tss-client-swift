@@ -1,0 +1,34 @@
+{
+  "configurations" : [
+    {
+      "id" : "E01395E3-4304-45AD-BD24-1F3A87A3E48A",
+      "name" : "Configuration 1",
+      "options" : {
+
+      }
+    }
+  ],
+  "defaultOptions" : {
+    "commandLineArgumentEntries" : [
+      {
+        "argument" : "LOCAL_SERVERS"
+      }
+    ],
+    "defaultTestExecutionTimeAllowance" : null,
+    "maximumTestExecutionTimeAllowance" : 60,
+    "maximumTestRepetitions" : 5,
+    "repeatInNewRunnerProcess" : true,
+    "testRepetitionMode" : "fixedIterations",
+    "testTimeoutsEnabled" : true
+  },
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:",
+        "identifier" : "tss-client-swiftTests",
+        "name" : "tss-client-swiftTests"
+      }
+    }
+  ],
+  "version" : 1
+}
