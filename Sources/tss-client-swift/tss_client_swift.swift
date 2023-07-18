@@ -353,11 +353,11 @@ public class TSSClient {
     }
     
     public func cleanup() {
+        MessageQueue.shared.removeMessages(session: session)
+        EventQueue.shared.clearEvents()
+        consumed = false
+        ready = false
         /*
-         // free rust objects
-             tss.random_generator_free(this._rng);
-             tss.threshold_signer_free(this._signer);
-
              // remove references
              delete globalThis.tss_clients[this.session];
 

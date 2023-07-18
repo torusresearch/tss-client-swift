@@ -42,7 +42,7 @@ public final class EventQueue {
         }
     }
     
-    public func clearEvents(session: String) {
+    public func clearEvents() {
         queue.sync(flags: .barrier) {
             events.removeAll()
         }
