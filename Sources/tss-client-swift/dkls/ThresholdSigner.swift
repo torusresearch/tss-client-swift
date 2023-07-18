@@ -42,6 +42,7 @@ public final class ThresholdSigner {
         return try Precompute(precompute: value)
     }
     
+    /*
     public func sign(message: String, hashOnly: Bool, counterparties: Counterparties, rng: ChaChaRng, comm: DKLSComm) throws -> String {
             var errorCode: Int32 = -1
             let messagePointer = UnsafePointer<Int8>((message as NSString).utf8String)
@@ -56,6 +57,7 @@ public final class ThresholdSigner {
             dkls_string_free(cast)
             return value
     }
+    */
     
     deinit {
         threshold_signer_free(pointer)

@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import SwiftKeccak
 
 struct Msg {
     let session: String
@@ -172,7 +173,7 @@ public class TSSClient {
         return signer.setup(rng: rng, comm: comm)
     }
     
-    // calculates a precompute
+    // calculates a precompute, each party calculates their own precompute
     public func precompute(parties: Counterparties) throws -> Precompute {
         return try signer.precompute(parties: parties, rng: rng, comm: comm)
     }
@@ -193,9 +194,15 @@ public class TSSClient {
         return try Utilities.localVerify(message: message, hashOnly: hashOnly, precompute: precompute, signatureFragments: fragments, pubKey: pubKey)
     }
     
+    /*
     // performs a precompute, sign and fragment exchange between all parties and returns the full signature
     public func sign(message: String, hashOnly: Bool, counterparties: Counterparties) throws -> String {
         return try signer.sign(message: message, hashOnly: hashOnly, counterparties: counterparties, rng: rng, comm: comm)
+    }
+    */
+    
+    public func hashMessage(message: String) -> String {
+        return String(decoding: keccak256(message), as: UTF8.self)
     }
     
     public func cleanup() {
