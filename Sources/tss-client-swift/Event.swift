@@ -1,7 +1,5 @@
 import Foundation
 
-
-
 public enum EventType {
   case PrecomputeComplete, PrecomputeError
 }

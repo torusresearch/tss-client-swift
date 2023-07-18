@@ -36,7 +36,7 @@ public final class EventQueue {
         }
     }
     
-    public func removeStaleEvents(time: Date) {
+    private func removeStaleEvents(time: Date) {
         queue.sync(flags: .barrier) {
             events.removeAll(where: { $0.occurred < time})
         }
