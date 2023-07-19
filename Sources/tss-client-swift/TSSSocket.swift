@@ -15,9 +15,24 @@ internal final class TSSSocket {
             socket = socketManager!.defaultSocket
             socket!.on(clientEvent: .connect, callback: {_,_ in })
             socket!.on(clientEvent: .disconnect, callback: {_,_ in })
-            socket!.on("precompute_complete", callback: {_,_ in })
-            socket!.on("precompute_failed", callback: {_,_ in })
-            socket!.on("send", callback: {_,_ in })
+            socket!.on("precompute_complete", callback: { data ,_ in
+                let session = data[0] as! String
+                let party = data[1] as! String
+                EventQueue.shared.addEvent(event: Event(message: party, session: session, occurred: Date(), type: EventType.PrecomputeComplete))
+            })
+            socket!.on("precompute_failed", callback: { data ,_ in
+                let session = data[0] as! String
+                let party = data[1] as! String
+                EventQueue.shared.addEvent(event: Event(message: party, session: session, occurred: Date(), type: EventType.PrecomputeComplete))
+            })
+            socket!.on("send", callback: {data ,_ in
+                let session = data[0] as! String
+                let sender = data[1] as! UInt64
+                let recipient = data[2] as! UInt64
+                let msg_type = data[3] as! String
+                let msg_data = data[4] as! String
+                MessageQueue.shared.addMessage(msg: Message(session: session, sender: sender, recipient: recipient, msgType: msg_type, msgData: msg_data))
+            })
             socket!.connect()
         }
     }
