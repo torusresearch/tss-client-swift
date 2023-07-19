@@ -7,7 +7,10 @@ final class dklsTests: XCTestCase {
     }
     
     func testCounterparties() throws {
-        let _ = try Counterparties(parties: "1,2");
+        let parties = "1,2"
+        let counterparties = try Counterparties(parties: parties);
+        let export = try counterparties.export()
+        XCTAssertEqual(parties, export)
     }
     
     func testSignatureFragments() throws {

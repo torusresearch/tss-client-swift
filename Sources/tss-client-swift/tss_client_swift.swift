@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import SwiftKeccak
+import SocketIO
 
 struct Msg {
     let session: String
@@ -141,64 +142,66 @@ public class TSSClient {
     // calculates a precompute, each party calculates their own precompute
     public func precompute(parties: Counterparties) throws -> Precompute {
         EventQueue.shared.updateFocus(time: Date())
-        /*
-         // check if sockets have connected and have an id;
-             this.sockets.map((socket, party) => {
-               if (socket !== null) {
-                 if (socket.id === undefined) {
-                   throw new Error(`socket not connected yet, session: ${this.session}, party: ${party}`);
-                 }
-               }
-             });
+        let parties_str = try parties.export()
+        let parties_array = parties_str.components(separatedBy: ",")
+        let party_indexes = parties_array.map { Int32($0)!}
+        
+        var sockets: [TSSSocket] = []
+        for i in party_indexes
+        {
+            let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: i)
+            if tsssocket!.socket!.status != SocketIOStatus.connected && tsssocket!.socket!.sid.isEmpty == false
+            {
+                sockets.append(tsssocket!)
+                throw TSSClientError.errorWithMessage("socket not connected yet, session:" + session + ", party:" + String(i))
+            }
+            
+        }
+        
+        for party in 0..<self.parties {
+            if party != index {
+                let (tssUrl,tssSocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(party))
+                let urlSession = URLSession.shared
+                let url = URL(string: tssUrl!.url!.absoluteString + "precompute")!
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
+                request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
+                request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
+                request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.addValue("[WEB3_SESSION_HEADER_KEY]", forHTTPHeaderField: TSSClient.sid(session: session))
+                
+                var endpoints: [String] = []
+                for (j, item) in sockets.enumerated()
+                {
+                    if j != self.index {
+                        endpoints.append("websocket:"+item.socket!.sid)
+                    }
+                }
+                
+                let msg: [String: Any]  = [
+                    "endpoints": endpoints,
+                    "session": session,
+                    "parties": [(1...self.parties)],
+                    "player_index": party,
+                    "threshold": self.parties,
+                    "pubkey": self.pubKey,
+                    "notifyWebsocketId": tssSocket!.socket!.sid,
+                    "sendWebsocket": tssSocket!.socket!.sid
+                ]
+                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
 
-             for (let i = 0; i < this.parties.length; i++) {
-               const party = this.parties[i];
-               if (party !== this.index) {
-                 fetch(`${this.lookupEndpoint(this.session, party)}/precompute`, {
-                   method: "POST",
-                   headers: {
-                     "Content-Type": "application/json",
-                     [WEB3_SESSION_HEADER_KEY]: this.sid,
-                   },
-                   body: JSON.stringify({
-                     endpoints: this.endpoints.map((endpoint, j) => {
-                       if (j !== this.index) {
-                         return endpoint;
-                       }
-                       // pass in different id for websocket connection for each server so that the server can communicate back
-                       return `websocket:${this.sockets[party].id}`;
-                     }),
-                     session: this.session,
-                     parties: this.parties,
-                     player_index: party,
-                     threshold: this.parties.length,
-                     pubkey: this.pubKey,
-                     notifyWebsocketId: this.sockets[party].id,
-                     sendWebsocket: this.sockets[party].id,
-                     ...additionalParams,
-                   }),
-                 });
-
-                 // axios.post(`${this.lookupEndpoint(this.session, party)}/precompute`, {
-                 //   endpoints: this.endpoints.map((endpoint, j) => {
-                 //     if (j !== this.index) {
-                 //       return endpoint;
-                 //     }
-                 //     // pass in different id for websocket connection for each server so that the server can communicate back
-                 //     return `websocket:${this.sockets[party].id}`;
-                 //   }),
-                 //   session: this.session,
-                 //   parties: this.parties,
-                 //   player_index: party,
-                 //   threshold: this.parties.length,
-                 //   pubkey: this.pubKey,
-                 //   notifyWebsocketId: this.sockets[party].id,
-                 //   sendWebsocket: this.sockets[party].id,
-                 //   ...additionalParams,
-                 // });
-               }
-             }
-         */
+                request.httpBody = jsonData
+                
+                let sem = DispatchSemaphore.init(value: 0)
+                // data, response, error
+                urlSession.dataTask(with: request) { data, _, error in
+                        sem.signal()
+                }.resume()
+                sem.wait()
+            }
+        }
+        
         if !setup() {
             throw TSSClientError.errorWithMessage("Failed to setup client")
         }
@@ -226,7 +229,6 @@ public class TSSClient {
             throw TSSClientError.errorWithMessage("Insufficient Precomputes");
         }
          
-        
         var signingMessage = ""
         if (hashOnly) {
             let hash = self.hashMessage(message: message)
@@ -265,7 +267,7 @@ public class TSSClient {
             request.httpBody = jsonData
             
             let sem = DispatchSemaphore.init(value: 0)
-            var result = NSString()
+            // data, response, error
             urlSession.dataTask(with: request) { data, _, error in
                 defer {
                     sem.signal()
@@ -347,6 +349,7 @@ public class TSSClient {
                 request.httpBody = jsonData
                 
                 let sem = DispatchSemaphore.init(value: 0)
+                // data, response, error
                 urlSession.dataTask(with: request) { _, _, error in
                         sem.signal()
                 }.resume()
