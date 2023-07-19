@@ -1,6 +1,6 @@
 import Foundation
 
-public final class EventQueue {
+internal final class EventQueue {
     //singleton class
     static let shared = EventQueue()
     
@@ -18,10 +18,10 @@ public final class EventQueue {
         }
     }
     
-    public func countEvents() -> [EventType: Int] {
+    public func countEvents(session: String) -> [EventType: Int] {
         return queue.sync {
             var counts: [EventType: Int] = [:]
-            let events = events.filter({ $0.occurred >= lastFocus})
+            let events = events.filter({ $0.occurred >= lastFocus && $0.session == session})
             for item in events {
                 counts[item.type] = (counts[item.type] ?? 0) + 1
             }
@@ -42,9 +42,9 @@ public final class EventQueue {
         }
     }
     
-    public func clearEvents() {
-        queue.sync(flags: .barrier) {
-            events.removeAll()
+    public func clearEvents(session: String?) {
+            queue.sync(flags: .barrier) {
+                events.removeAll(where: { $0.session == session})
         }
     }
 }

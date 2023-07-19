@@ -16,8 +16,8 @@ let package = Package(
         .package(name: "BigInt", url: "https://github.com/attaswift/BigInt.git", from: "5.3.0"),
         .package(name: "CryptoSwift", url: "https://github.com/krzyzanowskim/CryptoSwift.git",from: "1.5.1"),
         .package(name: "secp256k1", url: "https://github.com/Boilertalk/secp256k1.swift", from: "0.1.0"),
-        .package(url: "https://github.com/pusher/NWWebSocket.git", .upToNextMajor(from: "0.5.3")),
-        .package(name: "SwiftKeccak", url: "https://github.com/bitflying/SwiftKeccak.git", from: "0.1.0")
+        .package(name: "SwiftKeccak", url: "https://github.com/bitflying/SwiftKeccak.git", from: "0.1.0"),
+        .package(name: "SocketIO", url: "https://github.com/socketio/socket.io-client-swift", .upToNextMinor(from: "15.0.0"))
     ],
     targets: [
         .binaryTarget(name: "libdkls",
@@ -29,7 +29,7 @@ let package = Package(
         ),
         .target(
             name: "tss-client-swift",
-            dependencies: ["BigInt", "CryptoSwift", "secp256k1", "NWWebSocket", "SwiftKeccak", "lib"]),
+            dependencies: ["BigInt", "CryptoSwift", "secp256k1", "SwiftKeccak", "SocketIO", "lib"]),
         .testTarget(
             name: "tss-client-swiftTests",
             dependencies: ["tss-client-swift", "BigInt"]),

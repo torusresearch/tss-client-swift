@@ -1,6 +1,6 @@
 import Foundation
 
-public final class MessageQueue {
+internal final class MessageQueue {
     //singleton class
     static let shared = MessageQueue()
     

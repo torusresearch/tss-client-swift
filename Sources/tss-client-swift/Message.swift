@@ -1,6 +1,6 @@
 import Foundation
 
-public final class Message {
+internal final class Message {
     private(set) var session: String
     private(set) var sender: UInt64
     private(set) var recipient: UInt64

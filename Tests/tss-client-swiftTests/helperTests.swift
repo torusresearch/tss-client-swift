@@ -47,7 +47,6 @@ final class helpersTests: XCTestCase {
         let tsspub = try! getTSSPubKey(dkgPubKey: key1pub, userSharePubKey: key2pub, userTSSIndex: BigInt(2));
         XCTAssertEqual(tsspub.toHexString(), "04dd1619c7e99eb665e37c74828762e6a677511d4c52656ddc6499a57d486bddb8c0dc63b229ec9a31f4216138c3fbb67ac2630831135aecbaf0aafa095e439c61")
     }
-    
-    
+
     
 }

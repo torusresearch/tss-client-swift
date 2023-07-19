@@ -36,25 +36,21 @@ public class TSSClient {
     private(set) var signer: ThresholdSigner
     private(set) var rng: ChaChaRng
     private(set) var comm: DKLSComm
-    // these will need to be global static like MessageQueue, since readMsg and sendMsg may not capture self.
-    // var sockets: [NWConnection?]
-    //var endpoints: [String?]
     var ready: Bool = false
     var pubKey: String
-
-    public init(session: String, index: Int32, parties: [Int32], endpoints: [String?], share: String, pubKey: String) throws
+    public init(session: String, index: Int32, parties: [Int32], endpoints: [URL?], tssSocketEndpoints: [URL?], share: String, pubKey: String) throws
     {
-        //These checks will need to be done against global statics
+        if parties.count != tssSocketEndpoints.count {
+            throw TSSClientError.errorWithMessage("Parties and socket length must be equal")
+        }
         
-        //if parties.count != sockets.count {
-        //    throw TSSClientError.errorWithMessage("Parties and socket //length must be equal")
-        //}
+        if parties.count != endpoints.count {
+            throw TSSClientError.errorWithMessage("Parties and endpoint length must be equal")
+        }
         
-        //if parties.count != endpoints.count {
-        //    throw TSSClientError.errorWithMessage("Parties and endpoint //length must be equal")
-        //}
-        
-        //self.endpoints = endpoints
+        for (index,item) in endpoints.enumerated() {
+            TSSConnectionInfo.shared.addInfo(session: session, party: Int32(index+1), endpoint: item, socketUrl: tssSocketEndpoints[index])
+        }
 
         self.session = session
         self.parties = parties.count
@@ -224,10 +220,10 @@ public class TSSClient {
         do {
             let result = try signer.precompute(parties: parties, rng: rng, comm: comm)
             consumed = false
-            EventQueue.shared.addEvent(event: Event(message: "precompute_complete", occurred: Date(), type: EventType.PrecomputeComplete))
+            EventQueue.shared.addEvent(event: Event(message: "precompute_complete", session: self.session,  occurred: Date(), type: EventType.PrecomputeComplete))
             return result
         } catch let error {
-            EventQueue.shared.addEvent(event: Event(message: "precompute_failed", occurred: Date(), type: EventType.PrecomputeError))
+            EventQueue.shared.addEvent(event: Event(message: "precompute_failed", session: self.session, occurred: Date(), type: EventType.PrecomputeError))
             throw error
         }
     }
@@ -354,7 +350,7 @@ public class TSSClient {
     
     public func cleanup() {
         MessageQueue.shared.removeMessages(session: session)
-        EventQueue.shared.clearEvents()
+        EventQueue.shared.clearEvents(session: session)
         consumed = false
         ready = false
         /*
@@ -385,7 +381,7 @@ public class TSSClient {
     }
     
     public func isReady() throws -> Bool {
-        let counts = EventQueue.shared.countEvents()
+        let counts = EventQueue.shared.countEvents(session: self.session)
         if counts[EventType.PrecomputeError] ?? 0 > 0 {
             throw TSSClientError.errorWithMessage("Error occured during precompute");
         }
