@@ -16,16 +16,28 @@ internal final class TSSSocket {
             socket!.on(clientEvent: .connect, callback: {_,_ in })
             socket!.on(clientEvent: .disconnect, callback: {_,_ in })
             socket!.on("precompute_complete", callback: { data ,_ in
+                if session != self.session {
+                    return
+                }
+                
                 let session = data[0] as! String
                 let party = data[1] as! String
                 EventQueue.shared.addEvent(event: Event(message: party, session: session, occurred: Date(), type: EventType.PrecomputeComplete))
             })
             socket!.on("precompute_failed", callback: { data ,_ in
+                if session != self.session {
+                    return
+                }
+                
                 let session = data[0] as! String
                 let party = data[1] as! String
                 EventQueue.shared.addEvent(event: Event(message: party, session: session, occurred: Date(), type: EventType.PrecomputeComplete))
             })
             socket!.on("send", callback: {data ,_ in
+                if session != self.session {
+                    return
+                }
+                
                 let session = data[0] as! String
                 let sender = data[1] as! UInt64
                 let recipient = data[2] as! UInt64

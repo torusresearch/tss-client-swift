@@ -36,6 +36,7 @@ public class TSSClient {
     private(set) var signer: ThresholdSigner
     private(set) var rng: ChaChaRng
     private(set) var comm: DKLSComm
+    private(set) var index: Int32
     var ready: Bool = false
     var pubKey: String
     public init(session: String, index: Int32, parties: [Int32], endpoints: [URL?], tssSocketEndpoints: [URL?], share: String, pubKey: String) throws
@@ -52,6 +53,7 @@ public class TSSClient {
             TSSConnectionInfo.shared.addInfo(session: session, party: Int32(index+1), endpoint: item, socketUrl: tssSocketEndpoints[index])
         }
 
+        self.index = index
         self.session = session
         self.parties = parties.count
         self.pubKey = pubKey
@@ -104,9 +106,14 @@ public class TSSClient {
             
             do {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
-                let encoder = JSONEncoder()
-                let msg = TssSendMsg(session: session, sender: index, recipient: recipient, msg_type: msgType, msg_data: msgData)
-                let jsonData = try encoder.encode(msg)
+                let msg: [String: Any] = [
+                    "session": session,
+                    "sender": index,
+                    "recipient": recipient,
+                    "msg_type": msgType,
+                    "msg_data": msgData]
+                                          
+                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
                 if let tsssocket = tsssocket
                 {
                     if let socket = tsssocket.socket {
@@ -191,16 +198,6 @@ public class TSSClient {
                  // });
                }
              }
-             tss
-               .setup(this._signer, this._rng)
-               .then(() => {
-                 return tss.precompute(new Uint8Array(this.parties), this._signer, this._rng);
-               })
-               .then((precompute) => {
-                 this.precomputes[this.parties.indexOf(this.index)] = precompute;
-                 this._readyResolves[this.parties.indexOf(this.index)]();
-                 return null;
-               });
          */
         if !setup() {
             throw TSSClientError.errorWithMessage("Failed to setup client")
@@ -223,11 +220,12 @@ public class TSSClient {
         if consumed {
             throw TSSClientError.errorWithMessage("This instance has already signed a message and cannot be reused")
         }
-        /*
-             if (this.precomputes.length !== this.parties.length) {
-               throw new Error("insufficient precomputes");
-             }
-         */
+        
+        let precomputes = EventQueue.shared.countEvents(session: session)[EventType.PrecomputeComplete] ?? 0
+        if (precomputes != parties) {
+            throw TSSClientError.errorWithMessage("Insufficient Precomputes");
+        }
+         
         
         var signingMessage = ""
         if (hashOnly) {
@@ -239,6 +237,47 @@ public class TSSClient {
         } else {
             signingMessage = message
         }
+        
+        var fragments: [String] = []
+        for i in (0..<precomputes)
+        {
+            let (tssConnection,_) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
+            let urlSession = URLSession.shared
+            var request = URLRequest(url: tssConnection!.url!)
+            request.httpMethod = "POST"
+            request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
+            request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
+            request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
+            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.addValue("[WEB3_SESSION_HEADER_KEY]", forHTTPHeaderField: TSSClient.sid(session: session))
+            let msg: [String: Any]  = [
+                "session": session,
+                "sender": index,
+                "recipient": i,
+                "msg": signingMessage,
+                "hash_only": hashOnly,
+                "original_message": original_message,
+                "hash_algo":"keccak256"
+            ]
+            let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
+
+            request.httpBody = jsonData
+            
+            let sem = DispatchSemaphore.init(value: 0)
+            var result = NSString()
+            urlSession.dataTask(with: request) { data, _, error in
+                defer {
+                    sem.signal()
+                }
+                if let data = data {
+                    let resultString: String = String(decoding: data, as: UTF8.self)
+                    fragments.append(resultString)
+
+                }
+            }.resume()
+            sem.wait()
+        }
+
         /*
              this._startSignTime = Date.now();
              const sigFragmentsPromises = [];
@@ -290,14 +329,16 @@ public class TSSClient {
 
              const R = tss.get_r_from_precompute(this.precomputes[this.parties.indexOf(this.index)]);
          */
-        let signature_fragment = try signWithPrecompute(message: signingMessage, hashOnly: hashOnly, precompute: precompute)
         
-        let input = signature_fragment // plus server fragments
+        let signature_fragment = try signWithPrecompute(message: signingMessage, hashOnly: hashOnly, precompute: precompute)
+        fragments.append(signature_fragment)
+        
+        let input = fragments.joined(separator: ", ")
         let sigFrags = try SignatureFragments(input: input)
         
         let signature = try verifyWithPrecompute(message: signingMessage, hashOnly: hashOnly, precompute: precompute, fragments: sigFrags, pubKey: pubKey)
+        
         /*
-             const sig = tss.local_verify(msg, hash_only, R, sigFragments, this.pubKey);
              const sigHex = Buffer.from(sig, "base64").toString("hex");
              const r = new BN(sigHex.slice(0, 64), 16);
              let s = new BN(sigHex.slice(64), 16);
@@ -319,12 +360,6 @@ public class TSSClient {
     // returns a signature fragment for this signer
     private func signWithPrecompute(message: String, hashOnly: Bool, precompute: Precompute) throws -> String {
         return try Utilities.localSign(message: message, hashOnly: hashOnly, precompute: precompute)
-    }
-    
-    // use your fragment and get fragments from others to have all signature fragments
-    private func retrieveFragments(myFragment: String, parties: Counterparties) throws -> SignatureFragments {
-        // TODO: this needs to be written
-        return try SignatureFragments(input: "myFragment, each, other, fragment")
     }
     
     // returns a full signature using fragments and precompute
