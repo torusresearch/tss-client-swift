@@ -102,34 +102,16 @@ public class TSSClient {
             cast = UnsafeMutablePointer(mutating: msgDataCString)
             Utilities.CStringFree(ptr: cast)
             
-            let sid = session.components(separatedBy:  Delimiters.Delimiter4)[1]
-            
-            /*
-            const endpoint = lookupEndpoint(session, party);
-                if (endpoint.indexOf("websocket") !== -1) {
-                  await wsSend(globalThis.io, getWebSocketID(endpoint), session, self_index, party, msg_type, msg_data);
-                  return true;
-                }
-             const headers = { [WEB3_SESSION_HEADER_KEY]: sid };
-
-                 if (X_WEB3_API_KEY) {
-                   headers[WEB_API_KEY] = X_WEB3_API_KEY;
-                 }
-                 await axios.post(
-                   `${endpoint}/send`,
-                   {
-                     session,
-                     sender: self_index,
-                     recipient: party,
-                     msg_type,
-                     msg_data,
-                   },
-                   { headers, timeout: 2000, httpAgent, httpsAgent }
-                 );
-                 return true;
-            */
-            
-            return false;
+            do {
+                let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
+                let encoder = JSONEncoder()
+                let msg = TssSendMsg(session: session, sender: index, recipient: recipient, msg_type: msgType, msg_data: msgData)
+                let jsonData = try encoder.encode(msg)
+                tsssocket!.socket!.emit("send_msg", with: [jsonData])
+                return true
+            } catch {
+                return false
+            }
         }
         
         comm = try DKLSComm(session: session, index: index, parties: Int32(parties.count), readMsgCallback: readMsg, sendMsgCallback: sendMsg)
@@ -376,7 +358,7 @@ public class TSSClient {
          */
     }
     
-    public func sid() -> String {
+    public static func sid(session: String) -> String {
         return session.components(separatedBy:  Delimiters.Delimiter4)[1]
     }
     
