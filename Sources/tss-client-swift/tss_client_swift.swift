@@ -107,8 +107,14 @@ public class TSSClient {
                 let encoder = JSONEncoder()
                 let msg = TssSendMsg(session: session, sender: index, recipient: recipient, msg_type: msgType, msg_data: msgData)
                 let jsonData = try encoder.encode(msg)
-                tsssocket!.socket!.emit("send_msg", with: [jsonData])
-                return true
+                if let tsssocket = tsssocket
+                {
+                    if let socket = tsssocket.socket {
+                        socket.emit("send_msg", with: [jsonData])
+                        return true
+                    }
+                }
+                return false
             } catch {
                 return false
             }
