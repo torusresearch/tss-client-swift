@@ -24,7 +24,7 @@ public final class Counterparties {
             counterparties_to_string(pointer, error)
                 })
         guard errorCode == 0 else {
-            throw DKLSError("Error exporting signature fragments")
+            throw DKLSError("Error exporting conterparties")
             }
         let value = String.init(cString: result!)
         let cast = UnsafeMutablePointer(mutating: result)
