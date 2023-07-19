@@ -305,6 +305,7 @@ public class TSSClient {
              this._endSignTime = Date.now();
              return { r, s, recoveryParam };
          */
+        consumed = true
         return signature
     }
     
