@@ -243,7 +243,8 @@ public class TSSClient {
         {
             let (tssConnection,_) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
             let urlSession = URLSession.shared
-            var request = URLRequest(url: tssConnection!.url!)
+            let url = URL(string: tssConnection!.url!.absoluteString + "send")!
+            var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
             request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
@@ -277,58 +278,6 @@ public class TSSClient {
             }.resume()
             sem.wait()
         }
-
-        /*
-             this._startSignTime = Date.now();
-             const sigFragmentsPromises = [];
-             for (let i = 0; i < this.precomputes.length; i++) {
-               const precompute = this.precomputes[i];
-               const party = i;
-               if (precompute === "precompute_complete") {
-                 const endpoint = this.lookupEndpoint(this.session, party);
-                 sigFragmentsPromises.push(
-                   fetch(`${endpoint}/sign`, {
-                     method: "POST",
-                     headers: {
-                       "Content-Type": "application/json",
-                       [WEB3_SESSION_HEADER_KEY]: this.sid,
-                     },
-                     body: JSON.stringify({
-                       session: this.session,
-                       sender: this.index,
-                       recipient: party,
-                       msg,
-                       hash_only,
-                       original_message,
-                       hash_algo,
-                       ...additionalParams,
-                     }),
-                   })
-                     .then((res) => res.json())
-                     .then((res) => res.sig)
-
-                   // axios
-                   //   .post(`${endpoint}/sign`, {
-                   //     session: this.session,
-                   //     sender: this.index,
-                   //     recipient: party,
-                   //     msg,
-                   //     hash_only,
-                   //     original_message,
-                   //     hash_algo,
-                   //     ...additionalParams,
-                   //   })
-                   //   .then((res) => res.data.sig)
-                 );
-               } else {
-                 sigFragmentsPromises.push(Promise.resolve(tss.local_sign(msg, hash_only, precompute)));
-               }
-             }
-
-             const sigFragments = await Promise.all(sigFragmentsPromises);
-
-             const R = tss.get_r_from_precompute(this.precomputes[this.parties.indexOf(this.index)]);
-         */
         
         let signature_fragment = try signWithPrecompute(message: signingMessage, hashOnly: hashOnly, precompute: precompute)
         fragments.append(signature_fragment)
@@ -371,32 +320,39 @@ public class TSSClient {
         return keccak256(message).base64EncodedString()
     }
     
-    public func cleanup() {
+    public func cleanup() throws {
         MessageQueue.shared.removeMessages(session: session)
         EventQueue.shared.clearEvents(session: session)
         consumed = false
         ready = false
-        /*
-             // remove references
-             delete globalThis.tss_clients[this.session];
+        
+        for i in (0..<parties)
+        {
+            if i != index {
+                let (tssConnection,_) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
+                let urlSession = URLSession.shared
+                let url = URL(string: tssConnection!.url!.absoluteString + "cleanup")!
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
+                request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
+                request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
+                request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.addValue("[WEB3_SESSION_HEADER_KEY]", forHTTPHeaderField: TSSClient.sid(session: session))
+                let msg: [String: Any]  = [
+                    "session": session,
+                ]
+                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
 
-             await Promise.all(
-               this.parties.map((party) => {
-                 if (party !== this.index) {
-                   return fetch(`${this.lookupEndpoint(this.session, party)}/cleanup`, {
-                     method: "POST",
-                     headers: {
-                       "Content-Type": "application/json",
-                       [WEB3_SESSION_HEADER_KEY]: this.sid,
-                     },
-                     body: JSON.stringify({ session: this.session, ...additionalParams }),
-                   });
-                   // return axios.post(`${this.lookupEndpoint(this.session, party)}/cleanup`, { session: this.session, ...additionalParams });
-                 }
-                 return Promise.resolve(true);
-               })
-             );
-         */
+                request.httpBody = jsonData
+                
+                let sem = DispatchSemaphore.init(value: 0)
+                urlSession.dataTask(with: request) { _, _, error in
+                        sem.signal()
+                }.resume()
+                sem.wait()
+            }
+        }
     }
     
     public static func sid(session: String) -> String {
@@ -404,7 +360,7 @@ public class TSSClient {
     }
     
     public func isReady() throws -> Bool {
-        let counts = EventQueue.shared.countEvents(session: self.session)
+        let counts = EventQueue.shared.countEvents(session: session)
         if counts[EventType.PrecomputeError] ?? 0 > 0 {
             throw TSSClientError.errorWithMessage("Error occured during precompute");
         }
