@@ -5,6 +5,12 @@ import SwiftKeccak
 @testable import tss_client_swift
 
 final class tss_client_swiftTests: XCTestCase {
+    struct Delimiters {
+        static let Delimiter1 = "\u{001c}"
+        static let Delimiter2 = "\u{0015}"
+        static let Delimiter3 = "\u{0016}"
+        static let Delimiter4 = "\u{0017}"
+    }
     
     // this will only work for local testing with local servers
     let privateKeys = [
@@ -14,6 +20,9 @@ final class tss_client_swiftTests: XCTestCase {
       "f2588097a5df3911e4826e13dce2b6f4afb798bb8756675b17d4195db900af20",
       "5513438cd00c901ff362e25ae08aa723495bea89ab5a53ce165730bc1d9a0280"
     ];
+    
+    var session = ""
+    var share = ""
     
     private func base64ToBase64url(base64: String) -> String {
         let base64url = base64
@@ -27,7 +36,7 @@ final class tss_client_swiftTests: XCTestCase {
         return keccak256(message).base64EncodedString()
     }
     
-    private func getSignatures() throws -> [String]
+    private func getSignatures() throws -> [Any]
     {
         let tokenData: [String: Any] = [
             "exp": Date().addingTimeInterval(3000*60),
@@ -37,132 +46,132 @@ final class tss_client_swiftTests: XCTestCase {
             "verifier_id": "test_verifier_id"
         ]
         
-        let token = base64ToBase64url(base64: Data(try JSONSerialization.data(withJSONObject: tokenData, options: .prettyPrinted)).base64EncodedString())
+        let token =  Data(try JSONSerialization.data(withJSONObject: tokenData, options: .prettyPrinted)).base64EncodedString()
         
-        var sigs: [String] = []
+        var sigs: [Any] = []
         for item in privateKeys {
             let hash = keccak(message: token)
-            let nodeSig = SECP256K1.signForRecovery(hash: Data(hex: hash), privateKey: Data(hex: item))
-            
+            let (serializedNodeSig, _) = SECP256K1.signForRecovery(hash: Data(hex: hash), privateKey: Data(hex: item))
+            let unmarshaled = SECP256K1.unmarshalSignature(signatureData: serializedNodeSig!)!
+            let sig = unmarshaled.r.hexString+unmarshaled.s.hexString+String(format:"%02X", unmarshaled.v)
+            let msg: [String: Any]  = [
+                "data": token,
+                "sig": sig,
+            ]
+            let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
+            sigs.append(jsonData)
         }
         
-        /*
-        const token = base64Url.encode(JSON.stringify(tokenData));
-      
-        const sigs = privKeys.map(i => {
-          const msgHash = keccak256(token);
-          const nodeSig = ecsign(msgHash, Buffer.from(i, "hex"));
-          const sig = `${nodeSig.r.toString("hex")}${nodeSig.s.toString("hex")}${nodeSig.v.toString(16)}`;
-          return JSON.stringify({
-            data: token,
-            sig
-          });
-        });
-      
-        return sigs;
-         */
-        return
+        return sigs
+    }
+    
+    private func distributeShares(privKey: BigInt, parties: [Int32], endpoints: [String], localClientIndex: Int32, session: String) throws {
+        
+        var additiveShares: [BigInt] = [];
+        var shareSum = BigInt.zero
+        for _ in (0..<parties.count)
+        {
+            let share = SECP256K1.generatePrivateKey()!
+            let share_bigint = BigInt(share)
+            additiveShares.append(share_bigint)
+            shareSum += share_bigint
+        }
+        
+        let final_share = privKey - shareSum.modulus(modulusValueSigned)
+        additiveShares.append(final_share)
+        let reduced = additiveShares.reduce(BigInt.zero, {x, y in
+            (x + y).modulus(modulusValueSigned)
+        })
+        if reduced.serialize().suffix(32).toHexString() != privKey.serialize().suffix(32).toHexString()
+        {
+            throw TSSKeyError.General
+        }
+        
+        var shares: [BigInt] = []
+        for (partyIndex,additiveShare) in additiveShares.enumerated()
+        {
+            let parties_bigint = parties.map({ BigInt($0) })
+            let denormalizedShare = (additiveShare * getLagrangeCoeffs(parties_bigint, BigInt(partyIndex)).inverse(modulusValueSigned)!.modulus(modulusValueSigned))
+            shares.append(denormalizedShare)
+        }
+        
+        for i in (0..<parties.count)
+        {
+            let share = shares[i]
+            if Int32(i) == localClientIndex {
+                self.share = share.serialize().suffix(32).toHexString().toBase64()
+                self.session = session
+            } else {
+                let urlSession = URLSession.shared
+                let url = URL(string: endpoints[i] + "/share")!
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
+                request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
+                request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
+                request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+                let msg: [String: Any]  = [
+                    "session": session,
+                    "share": base64ToBase64url(base64: share.serialize().suffix(32).toHexString().toBase64())
+                ]
+                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
+                
+                request.httpBody = jsonData
+                
+                let sem = DispatchSemaphore.init(value: 0)
+                // data, response, error
+                urlSession.dataTask(with: request) { _, _, error in
+                    sem.signal()
+                }.resume()
+                sem.wait()
+            }
+        }
+    }
+    
+    private func setupMockShares(endpoints: [String], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data,Data)
+    {
+        let privKey = SECP256K1.generatePrivateKey()!
+        let publicKey = SECP256K1.privateToPublic(privateKey: privKey, compressed: false)!
+        try distributeShares(privKey: BigInt(privKey), parties: parties, endpoints: endpoints, localClientIndex: localClientIndex, session: session)
+        return (privKey, publicKey)
+    }
+    
+    private func generateEndpoints(parties: Int, clientIndex: Int32) -> ([String?],[String?],[Int32]) {
+        var endPoints: [String?] = []
+        var tssWSEndpoints: [String?] = []
+        var partyIndexes: [Int32] = []
+        var serverPortOffset = 0
+        let basePort = 8000
+        for i in (0..<parties)
+        {
+            partyIndexes.append(Int32(i))
+            if Int32(i) == clientIndex {
+                endPoints.append(nil)
+                tssWSEndpoints.append(nil)
+            } else {
+                endPoints.append("http://localhost:"+String((basePort+serverPortOffset)))
+                tssWSEndpoints.append("http://localhost:"+String((basePort+serverPortOffset)))
+                serverPortOffset += 1
+            }
+        }
+        return (endPoints, tssWSEndpoints, partyIndexes)
     }
     
     func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
-        print(BigUInt(2) - BigUInt(2));
-//        XCTAssertEqual(tss_client_swift().text, "Hello, World!")
+        let servers = 4
+        let msg = "hello world"
+        let msgHash = keccak(message: msg)
+        let clientIndex = servers - 1;
+        let testingRouteIdentifier = "testingShares";
+        let random = BigInt(SECP256K1.generatePrivateKey()!) + BigInt(Date().timeIntervalSince1970)
+        let randomNonce = keccak(message: String(random))
+        let vid = "test_verifier_name" + Delimiters.Delimiter1 + "test_verifier_id"
+        let session = testingRouteIdentifier + vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce + testingRouteIdentifier
+        let sigs = try getSignatures()
     }
 }
 
 /*
- import { localStorageDB } from "@toruslabs/tss-client";
- import { ecsign } from "ethereumjs-util";
- import axios from "axios";
- import BN from "bn.js";
- import eccrypto from "eccrypto";
- import { io, Socket } from "socket.io-client";
- import base64Url from "base64url";
- import keccak256 from "keccak256";
- import { getEcCrypto } from "./utils";
-
-   export const createSockets = async (wsEndpoints: string[]): Promise<Socket[]> => {
-     return wsEndpoints.map((wsEndpoint) => {
-       if (wsEndpoint === null || wsEndpoint === undefined) {
-         return null as any;
-       }
-       return io(wsEndpoint, { transports: ["websocket", "polling"], withCredentials: true, reconnectionDelayMax: 10000, reconnectionAttempts: 10 });
-     });
-   };
-
-   export const getLagrangeCoeff = (parties: number[], party: number): BN => {
-     const ec = getEcCrypto();
-     const partyIndex = new BN(party + 1);
-     let upper = new BN(1);
-     let lower = new BN(1);
-     for (let i = 0; i < parties.length; i += 1) {
-       const otherParty = parties[i];
-       const otherPartyIndex = new BN(parties[i] + 1);
-       if (party !== otherParty) {
-         upper = upper.mul(otherPartyIndex.neg());
-         upper = upper.umod(ec.curve.n);
-         let temp = partyIndex.sub(otherPartyIndex);
-         temp = temp.umod(ec.curve.n);
-         lower = lower.mul(temp).umod(ec.curve.n);
-       }
-     }
-   
-     const delta = upper.mul(lower.invm(ec.curve.n)).umod(ec.curve.n);
-     return delta;
-   };
-   export const distributeShares = async (privKey: any, parties: number[], endpoints: string[], localClientIndex: number, session: string) => {
-     const additiveShares = [];
-     const ec = getEcCrypto();
-     let shareSum = new BN(0);
-     for (let i = 0; i < parties.length - 1; i++) {
-       const share = new BN(eccrypto.generatePrivate());
-       additiveShares.push(share);
-       shareSum = shareSum.add(share);
-     }
-   
-     const finalShare = privKey.sub(shareSum.umod(ec.curve.n)).umod(ec.curve.n);
-     additiveShares.push(finalShare);
-     const reduced = additiveShares.reduce((acc, share) => acc.add(share).umod(ec.curve.n), new BN(0));
-   
-     if (reduced.toString(16) !== privKey.toString(16)) {
-       throw new Error("additive shares dont sum up to private key");
-     }
-   
-     // denormalise shares
-     const shares = additiveShares.map((additiveShare, party) => {
-       return additiveShare.mul(getLagrangeCoeff(parties, party).invm(ec.curve.n)).umod(ec.curve.n);
-     });
-   
-     console.log(
-       "shares",
-       shares.map((s) => s.toString(16, 64))
-     );
-   
-     const waiting = [];
-     for (let i = 0; i < parties.length; i++) {
-       const share = shares[i];
-       if (i === localClientIndex) {
-
-         waiting.push(localStorageDB.set(`session-${session}:share`, Buffer.from(share.toString(16, 64), "hex").toString("base64")));
-         continue;
-       }
-       waiting.push(
-         axios
-           .post(`${endpoints[i]}/share`, {
-             session,
-             share: Buffer.from(share.toString(16, 64), "hex").toString("base64"),
-           })
-           .then((res) => res.data)
-       );
-     }
-     await Promise.all(waiting);
-   };
- 
- ////////////////////////////////////////////////////////////////
- 
  import { Client, localStorageDB } from "@toruslabs/tss-client";
  import * as tss from "@toruslabs/tss-lib";
  import BN from "bn.js";
@@ -197,60 +206,6 @@ final class tss_client_swiftTests: XCTestCase {
      });
      console.log(msg);
    };
-   
- const setupMockShares = async (endpoints: string[], parties: number[], session: string) => {
-   const privKey = new BN(eccrypto.generatePrivate());
-   // (window as any).privKey = privKey;
-   const pubKeyElliptic = ec.curve.g.mul(privKey);
-   const pubKeyX = pubKeyElliptic.getX().toString(16, 64);
-   const pubKeyY = pubKeyElliptic.getY().toString(16, 64);
-   const pubKeyHex = `${pubKeyX}${pubKeyY}`;
-   const pubKey = Buffer.from(pubKeyHex, "hex").toString("base64");
-
-   // distribute shares to servers and local device
-   await distributeShares(privKey, parties, endpoints, clientIndex, session);
-
-   return { pubKey, privKey };
- };
-
- const setupSockets = async (tssWSEndpoints: string[]) => {
-   const sockets = await createSockets(tssWSEndpoints);
-
-   // wait for websockets to be connected
-   await new Promise((resolve) => {
-     const checkConnectionTimer = setInterval(() => {
-       for (let i = 0; i < sockets.length; i++) {
-         if (sockets[i] !== null && !sockets[i].connected) return;
-       }
-       clearInterval(checkConnectionTimer);
-       resolve(true);
-     }, 100);
-   });
-
-   console.log("sockets", tssWSEndpoints, sockets);
-   return sockets;
- };
-
- const generateEndpoints = (parties: number, clientIndex: number) => {
-   const endpoints: string[] = [];
-   const tssWSEndpoints: string[] = [];
-   const partyIndexes: number[] = [];
-   let serverPortOffset = 0;
-   const basePort = 8000;
-   for (let i = 0; i < parties ; i++) {
-     partyIndexes.push(i);
-     if (i === clientIndex) {
-       endpoints.push(null as any);
-       tssWSEndpoints.push(null as any);
-     } else {
-       endpoints.push(`http://localhost:${basePort + serverPortOffset}`);
-       tssWSEndpoints.push(`http://localhost:${basePort + serverPortOffset}`);
-       serverPortOffset++;
-     }
-   }
-   return { endpoints, tssWSEndpoints, partyIndexes };
- };
-
 
  const runTest = async () => {
    // this identifier is only required for testing,
