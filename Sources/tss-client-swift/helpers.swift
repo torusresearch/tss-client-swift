@@ -162,21 +162,4 @@ func getTSSPubKey(dkgPubKey: Data, userSharePubKey: Data, userTSSIndex: BigInt) 
 
     return combination
 }
-/*
-func createSockets(wsEndpoints: [String?], sessionId: String) -> [WebSocketManager?] {
-    return wsEndpoints.map { wsEndpoint in
-        guard let wsEndpoint = wsEndpoint else {
-            return nil
-        }
-        
-        let webSocketManager = WebSocketManager(url: wsEndpoint,
-                                                path: "/tss/socket.io",
-                                                sessionId: sessionId,
-                                                withCredentials: true,
-                                                reconnectionDelayMax: 10000,
-                                                reconnectionAttempts: 0)
-        return webSocketManager
-    }
-}
-*/
 

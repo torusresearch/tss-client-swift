@@ -2,6 +2,7 @@ import Foundation
 import Network
 import SwiftKeccak
 import SocketIO
+import BigInt
 
 struct Msg {
     let session: String
@@ -40,6 +41,7 @@ public class TSSClient {
     private(set) var index: Int32
     var ready: Bool = false
     var pubKey: String
+    var _sLessThanHalf = true
     public init(session: String, index: Int32, parties: [Int32], endpoints: [URL?], tssSocketEndpoints: [URL?], share: String, pubKey: String) throws
     {
         if parties.count != tssSocketEndpoints.count {
@@ -216,7 +218,7 @@ public class TSSClient {
         }
     }
     
-    public func sign(message: String, hashOnly: Bool, original_message: String, precompute: Precompute) throws -> String {
+    public func sign(message: String, hashOnly: Bool, original_message: String, precompute: Precompute) throws -> (BigInt, BigInt, BigInt) {
         if try isReady() == false {
             throw TSSClientError.errorWithMessage("Client is not ready")
         }
@@ -228,7 +230,7 @@ public class TSSClient {
         if (precomputes != parties) {
             throw TSSClientError.errorWithMessage("Insufficient Precomputes");
         }
-         
+        
         var signingMessage = ""
         if (hashOnly) {
             let hash = self.hashMessage(message: message)
@@ -263,7 +265,7 @@ public class TSSClient {
                 "hash_algo":"keccak256"
             ]
             let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
-
+            
             request.httpBody = jsonData
             
             let sem = DispatchSemaphore.init(value: 0)
@@ -275,7 +277,7 @@ public class TSSClient {
                 if let data = data {
                     let resultString: String = String(decoding: data, as: UTF8.self)
                     fragments.append(resultString)
-
+                    
                 }
             }.resume()
             sem.wait()
@@ -289,24 +291,24 @@ public class TSSClient {
         
         let signature = try verifyWithPrecompute(message: signingMessage, hashOnly: hashOnly, precompute: precompute, fragments: sigFrags, pubKey: pubKey)
         
-        /*
-             const sigHex = Buffer.from(sig, "base64").toString("hex");
-             const r = new BN(sigHex.slice(0, 64), 16);
-             let s = new BN(sigHex.slice(64), 16);
-             let recoveryParam = Buffer.from(R, "base64")[63] % 2;
-             if (this._sLessThanHalf) {
-               const ec = getEc();
-               const halfOfSecp256k1n = ec.n.div(new BN(2));
-               if (s.gt(halfOfSecp256k1n)) {
-                 s = ec.n.sub(s);
-                 recoveryParam = (recoveryParam + 1) % 2;
-               }
-             }
-             this._endSignTime = Date.now();
-             return { r, s, recoveryParam };
-         */
+        let precompute_r = try precompute.getR()
+        let decoded_r = Data(base64Encoded: precompute_r)
+        let decoded = Data(base64Encoded: signature)
+        let sighex = decoded!.toHexString()
+        let r = BigInt(sighex.prefix(64), radix: 16)!
+        var s = BigInt(sighex.suffix(from: sighex.index(sighex.startIndex, offsetBy: 64)), radix: 16)!
+        var recoveryParam = BigInt(integerLiteral: Int64(decoded_r!.bytes[63]) % 2)
+        
+        if _sLessThanHalf {
+            let halfOfSecp256k1n = modulusValueSigned/2
+            if s > halfOfSecp256k1n {
+                s = modulusValueSigned-s
+                recoveryParam = (recoveryParam + 1) % 2
+            }
+        }
+        
         consumed = true
-        return signature
+        return (s, r, recoveryParam)
     }
     
     // returns a signature fragment for this signer
