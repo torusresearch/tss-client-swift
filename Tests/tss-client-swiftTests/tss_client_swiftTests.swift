@@ -33,20 +33,20 @@ final class tss_client_swiftTests: XCTestCase {
     }
     
     private func keccak(message: String) -> String {
-        return keccak256(message).base64EncodedString()
+        return keccak256(message).hexString
     }
     
     private func getSignatures() throws -> [Any]
     {
         let tokenData: [String: Any] = [
-            "exp": Date().addingTimeInterval(3000*60),
+            "exp": Date().addingTimeInterval(3000*60).timeIntervalSince1970,
             "temp_key_x": "test_key_x",
             "temp_key_y": "test_key_y",
             "verifier_name": "test_verifier_name",
             "verifier_id": "test_verifier_id"
         ]
         
-        let token =  Data(try JSONSerialization.data(withJSONObject: tokenData, options: .prettyPrinted)).base64EncodedString()
+        let token =  Data(try JSONSerialization.data(withJSONObject: tokenData)).base64EncodedString()
         
         var sigs: [Any] = []
         for item in privateKeys {
@@ -65,7 +65,7 @@ final class tss_client_swiftTests: XCTestCase {
         return sigs
     }
     
-    private func distributeShares(privKey: BigInt, parties: [Int32], endpoints: [String], localClientIndex: Int32, session: String) throws {
+    private func distributeShares(privKey: BigInt, parties: [Int32], endpoints: [String?], localClientIndex: Int32, session: String) throws {
         
         var additiveShares: [BigInt] = [];
         var shareSum = BigInt.zero
@@ -91,7 +91,8 @@ final class tss_client_swiftTests: XCTestCase {
         for (partyIndex,additiveShare) in additiveShares.enumerated()
         {
             let parties_bigint = parties.map({ BigInt($0) })
-            let denormalizedShare = (additiveShare * getLagrangeCoeffs(parties_bigint, BigInt(partyIndex)).inverse(modulusValueSigned)!.modulus(modulusValueSigned))
+            let coeffs = getLagrangeCoeffs(parties_bigint, BigInt(partyIndex))
+            let denormalizedShare = (additiveShare * coeffs.inverse(modulusValueSigned)!.modulus(modulusValueSigned))
             shares.append(denormalizedShare)
         }
         
@@ -103,7 +104,7 @@ final class tss_client_swiftTests: XCTestCase {
                 self.session = session
             } else {
                 let urlSession = URLSession.shared
-                let url = URL(string: endpoints[i] + "/share")!
+                let url = URL(string: endpoints[i]! + "/share")!
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
@@ -128,7 +129,7 @@ final class tss_client_swiftTests: XCTestCase {
         }
     }
     
-    private func setupMockShares(endpoints: [String], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data,Data)
+    private func setupMockShares(endpoints: [String?], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data,Data)
     {
         let privKey = SECP256K1.generatePrivateKey()!
         let publicKey = SECP256K1.privateToPublic(privateKey: privKey, compressed: false)!
@@ -158,16 +159,20 @@ final class tss_client_swiftTests: XCTestCase {
     }
     
     func testExample() throws {
-        let servers = 4
+        let parties = 4
         let msg = "hello world"
         let msgHash = keccak(message: msg)
-        let clientIndex = servers - 1;
+        let clientIndex =  Int32(parties - 1);
         let testingRouteIdentifier = "testingShares";
         let random = BigInt(SECP256K1.generatePrivateKey()!) + BigInt(Date().timeIntervalSince1970)
         let randomNonce = keccak(message: String(random))
         let vid = "test_verifier_name" + Delimiters.Delimiter1 + "test_verifier_id"
         let session = testingRouteIdentifier + vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce + testingRouteIdentifier
         let sigs = try getSignatures()
+        
+        let (endpoints, socketEndpoints, partyIndexes) = generateEndpoints(parties: parties, clientIndex: clientIndex)
+        try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
+        
     }
 }
 
