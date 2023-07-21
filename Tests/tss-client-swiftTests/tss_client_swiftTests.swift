@@ -22,7 +22,15 @@ final class tss_client_swiftTests: XCTestCase {
     ];
     
     var session = ""
-    var share = ""
+    var share : BigInt = BigInt.zero
+    
+    private func base64Share(share: BigInt) -> String {
+        return self.share.serialize().suffix(32).base64EncodedString()
+    }
+    
+    private func base64PublicKey(pubKey: Data) -> String {
+        return Data(pubKey.bytes.dropFirst()).base64EncodedString()
+    }
     
     private func base64ToBase64url(base64: String) -> String {
         let base64url = base64
@@ -99,8 +107,6 @@ final class tss_client_swiftTests: XCTestCase {
     }
     
     private func distributeShares(privKey: BigInt, parties: [Int32], endpoints: [String?], localClientIndex: Int32, session: String) throws {
-        
-        print("sk:" + privKey.serialize().toHexString())
         var additiveShares: [BigInt] = [];
         var shareSum = BigInt.zero
         for _ in (0..<(parties.count-1))
@@ -120,7 +126,7 @@ final class tss_client_swiftTests: XCTestCase {
         let reduced = additiveShares.reduce(0) {
             ($0 + $1).modulus(modulusValueSigned)
         }
-        if reduced.serialize().suffix(32).toHexString() != privKey.serialize().suffix(32).toHexString()
+        if reduced.serialize().toHexString() != privKey.serialize().toHexString()
         {
             throw TSSClientError.errorWithMessage("Additive shares don't sum up to private key")
         }
@@ -138,7 +144,7 @@ final class tss_client_swiftTests: XCTestCase {
         {
             let share = shares[i]
             if Int32(i) == localClientIndex {
-                self.share = share.serialize().suffix(32).toHexString().toBase64()
+                self.share = share
                 self.session = session
             } else {
                 let urlSession = URLSession.shared
@@ -151,7 +157,7 @@ final class tss_client_swiftTests: XCTestCase {
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
                 let msg: [String: Any]  = [
                     "session": session,
-                    "share": base64ToBase64url(base64: share.serialize().suffix(32).toHexString().toBase64())
+                    "share": base64ToBase64url(base64: base64Share(share: share))
                 ]
                 let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
                 
@@ -167,14 +173,14 @@ final class tss_client_swiftTests: XCTestCase {
         }
     }
     
-    private func setupMockShares(endpoints: [String?], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data,Data)
+    private func setupMockShares(endpoints: [String?], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data, String)
     {
         let privKey = SECP256K1.generatePrivateKey()!
         let privKeyBigUInt = BigUInt(privKey)
         let privKeyBigInt = BigInt(sign: .plus, magnitude: privKeyBigUInt)
         let publicKey = SECP256K1.privateToPublic(privateKey: privKey, compressed: false)!
         try distributeShares(privKey: privKeyBigInt, parties: parties, endpoints: endpoints, localClientIndex: localClientIndex, session: session)
-        return (privKey, publicKey)
+        return (privKey, base64PublicKey(pubKey: publicKey))
     }
     
     private func generateEndpoints(parties: Int, clientIndex: Int32) -> ([String?],[String?],[Int32]) {
@@ -212,8 +218,26 @@ final class tss_client_swiftTests: XCTestCase {
         let sigs = try getSignatures()
         
         let (endpoints, socketEndpoints, partyIndexes) = generateEndpoints(parties: parties, clientIndex: clientIndex)
-        try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
+        let (privateKey, publicKey) = try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
         
+        let client = try TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: base64Share(share: share), pubKey: publicKey)
+        
+        var connected = 0
+        // wait for socket connections
+        for party in partyIndexes {
+            while connected != (partyIndexes.count-1) {
+                if party != clientIndex {
+                    let (_, socketConnection) = try TSSConnectionInfo.shared.lookupEndpoint(session: self.session, party: party)
+                    if socketConnection == nil || socketConnection!.socket == nil {
+                        continue
+                    }
+                    if socketConnection!.socket!.status == .connected
+                    {
+                        connected += 1
+                    }
+                }
+            }
+        }
     }
 }
 

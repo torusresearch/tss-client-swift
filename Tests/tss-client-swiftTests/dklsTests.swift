@@ -50,4 +50,14 @@ final class dklsTests: XCTestCase {
         let export = try precompute.export()
         XCTAssertEqual(input, export)
     }
+    
+    func testThresholdSignerInit() throws {
+        let session = "testingSharestest_verifier_name\u{1c}test_verifier_id\u{15}default\u{16}0\u{17}577f8e058813e31d332c920ace5298b563c36d8d02d5c8cbce5b91621b7ef63etestingShares"
+        let parties: Int32 = 2
+        let threshold: Int32 = 2
+        let index: Int32 = 0
+        let share = "jLot8K2VTTJARiS7XCOuyYGE+rwsfNFFCq6CCyCdqSw="
+        let publicKey = "+AHtxLzwIRuzGFj/PZlgPpupyzqBvCn63nXjrWd6B9djE4NZL5b/HaHW/fGTxlfCa871n+FrkUnQhnSd3+ND7A=="
+        let _ = try ThresholdSigner(session: session, playerIndex: index, parties: parties, threshold: threshold, share: share, publicKey: publicKey)
+    }
 }
