@@ -237,7 +237,7 @@ public class TSSClient {
             if self.hashMessage(message: original_message) != hash {
                 throw TSSClientError.errorWithMessage("hash of original message does not match message")
             }
-            signingMessage = hash
+            signingMessage = hash.toBase64()
         } else {
             signingMessage = message
         }
@@ -322,7 +322,7 @@ public class TSSClient {
     }
     
     private func hashMessage(message: String) -> String {
-        return keccak256(message).base64EncodedString()
+        return keccak256(message).hexString
     }
     
     public func cleanup() throws {
