@@ -73,15 +73,15 @@ final class tss_client_swiftTests: XCTestCase {
         for _ in (0..<(parties.count-1))
         {
             let share = SECP256K1.generatePrivateKey()!
-            let share_bigint = BigInt(share).modulus(modulusValueSigned)
-            print("share:" + share_bigint.serialize().toHexString())
-            additiveShares.append(share_bigint)
-            shareSum += share_bigint
+            let shareBigUint = BigUInt(share)
+            let shareBigInt = BigInt(sign: .plus, magnitude: shareBigUint)
+            print("share:" + shareBigInt.serialize().toHexString())
+            additiveShares.append(shareBigInt)
+            shareSum += shareBigInt
         }
         
-        let shareSumMod = shareSum.modulus(modulusValueSigned)
-        let final_share = (privKey - shareSumMod).modulus(modulusValueSigned)
-        additiveShares.append(final_share)
+        let finalShare = (privKey - shareSum.modulus(modulusValueSigned)).modulus(modulusValueSigned)
+        additiveShares.append(finalShare)
         
         print(additiveShares)
         
@@ -96,9 +96,9 @@ final class tss_client_swiftTests: XCTestCase {
         var shares: [BigInt] = []
         for (partyIndex,additiveShare) in additiveShares.enumerated()
         {
-            let parties_bigint = parties.map({ BigInt($0) })
-            let coeffs = getLagrangeCoeffs(parties_bigint, BigInt(partyIndex))
-            let denormalizedShare = (additiveShare * coeffs.inverse(modulusValueSigned)!.modulus(modulusValueSigned))
+            let partiesBigInt = parties.map({ BigInt($0) })
+            let coeff = try getDenormaliseCoeff(party: BigInt(partyIndex),parties: partiesBigInt)
+            let denormalizedShare = (additiveShare * coeff).modulus(modulusValueSigned)
             shares.append(denormalizedShare)
         }
         
@@ -138,7 +138,8 @@ final class tss_client_swiftTests: XCTestCase {
     private func setupMockShares(endpoints: [String?], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data,Data)
     {
         let privKey = SECP256K1.generatePrivateKey()!
-        let privKeyBigInt = BigInt(privKey).modulus(modulusValueSigned)
+        let privKeyBigUInt = BigUInt(privKey)
+        let privKeyBigInt = BigInt(sign: .plus, magnitude: privKeyBigUInt)
         let publicKey = SECP256K1.privateToPublic(privateKey: privKey, compressed: false)!
         try distributeShares(privKey: privKeyBigInt, parties: parties, endpoints: endpoints, localClientIndex: localClientIndex, session: session)
         return (privKey, publicKey)
