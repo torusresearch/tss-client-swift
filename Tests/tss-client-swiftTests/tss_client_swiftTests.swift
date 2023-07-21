@@ -67,24 +67,30 @@ final class tss_client_swiftTests: XCTestCase {
     
     private func distributeShares(privKey: BigInt, parties: [Int32], endpoints: [String?], localClientIndex: Int32, session: String) throws {
         
+        print("sk:" + privKey.serialize().toHexString())
         var additiveShares: [BigInt] = [];
         var shareSum = BigInt.zero
-        for _ in (0..<parties.count)
+        for _ in (0..<(parties.count-1))
         {
             let share = SECP256K1.generatePrivateKey()!
-            let share_bigint = BigInt(share)
+            let share_bigint = BigInt(share).modulus(modulusValueSigned)
+            print("share:" + share_bigint.serialize().toHexString())
             additiveShares.append(share_bigint)
             shareSum += share_bigint
         }
         
-        let final_share = privKey - shareSum.modulus(modulusValueSigned)
+        let shareSumMod = shareSum.modulus(modulusValueSigned)
+        let final_share = (privKey - shareSumMod).modulus(modulusValueSigned)
         additiveShares.append(final_share)
-        let reduced = additiveShares.reduce(BigInt.zero, {x, y in
-            (x + y).modulus(modulusValueSigned)
-        })
+        
+        print(additiveShares)
+        
+        let reduced = additiveShares.reduce(0) {
+            ($0 + $1).modulus(modulusValueSigned)
+        }
         if reduced.serialize().suffix(32).toHexString() != privKey.serialize().suffix(32).toHexString()
         {
-            throw TSSKeyError.General
+            throw TSSClientError.errorWithMessage("Additive shares don't sum up to private key")
         }
         
         var shares: [BigInt] = []
@@ -132,8 +138,9 @@ final class tss_client_swiftTests: XCTestCase {
     private func setupMockShares(endpoints: [String?], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data,Data)
     {
         let privKey = SECP256K1.generatePrivateKey()!
+        let privKeyBigInt = BigInt(privKey).modulus(modulusValueSigned)
         let publicKey = SECP256K1.privateToPublic(privateKey: privKey, compressed: false)!
-        try distributeShares(privKey: BigInt(privKey), parties: parties, endpoints: endpoints, localClientIndex: localClientIndex, session: session)
+        try distributeShares(privKey: privKeyBigInt, parties: parties, endpoints: endpoints, localClientIndex: localClientIndex, session: session)
         return (privKey, publicKey)
     }
     
