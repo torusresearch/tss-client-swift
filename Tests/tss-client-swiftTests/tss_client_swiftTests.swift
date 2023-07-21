@@ -105,8 +105,7 @@ final class tss_client_swiftTests: XCTestCase {
         var shareSum = BigInt.zero
         for _ in (0..<(parties.count-1))
         {
-            let share = SECP256K1.generatePrivateKey()!
-            let shareBigUint = BigUInt(share)
+            let shareBigUint = BigUInt(SECP256K1.generatePrivateKey()!)
             let shareBigInt = BigInt(sign: .plus, magnitude: shareBigUint)
             print("share:" + shareBigInt.serialize().toHexString())
             additiveShares.append(shareBigInt)
@@ -205,7 +204,8 @@ final class tss_client_swiftTests: XCTestCase {
         let msgHash = keccak(message: msg)
         let clientIndex =  Int32(parties - 1);
         let testingRouteIdentifier = "testingShares";
-        let random = BigInt(SECP256K1.generatePrivateKey()!) + BigInt(Date().timeIntervalSince1970)
+        let randomKey = BigUInt(SECP256K1.generatePrivateKey()!)
+        let random = BigInt(sign: .plus, magnitude: randomKey) + BigInt(Date().timeIntervalSince1970)
         let randomNonce = keccak(message: String(random))
         let vid = "test_verifier_name" + Delimiters.Delimiter1 + "test_verifier_id"
         let session = testingRouteIdentifier + vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce + testingRouteIdentifier
