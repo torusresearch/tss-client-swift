@@ -65,6 +65,39 @@ final class tss_client_swiftTests: XCTestCase {
         return sigs
     }
     
+    private func getLagrangeCoefficients(parties: [BigInt], party: BigInt) throws -> BigInt {
+        let partyIndex = party + 1
+        var upper = BigInt(1)
+        var lower = BigInt(1)
+        for i in (0..<parties.count) {
+            let otherParty = parties[i]
+            let otherPartyIndex = otherParty + 1
+            if party != otherParty {
+                var otherPartyIndexNeg = otherPartyIndex
+                otherPartyIndexNeg.negate()
+                upper = (upper * otherPartyIndexNeg).modulus(modulusValueSigned)
+                let temp = (partyIndex - otherPartyIndex).modulus(modulusValueSigned)
+                lower = (lower * temp).modulus(modulusValueSigned)
+            }
+        }
+        
+        let lowerInverse = lower.inverse(modulusValueSigned)
+        if lowerInverse == nil {
+            throw TSSClientError.errorWithMessage("No modular inverse for lower when calculating lagrange coefficients")
+        }
+        let delta = (upper * lowerInverse!).modulus(modulusValueSigned)
+        return delta
+    }
+    
+    private func denormalizeShare(additiveShare: BigInt, parties: [BigInt], party: BigInt) throws -> BigInt {
+        let coeff = try getLagrangeCoefficients(parties: parties, party: party)
+        let coeffInverse = coeff.inverse(modulusValueSigned)
+        if coeffInverse == nil {
+            throw TSSClientError.errorWithMessage("No modular inverse of coeff when denormalizing share")
+        }
+        return (additiveShare * coeffInverse!).modulus(modulusValueSigned)
+    }
+    
     private func distributeShares(privKey: BigInt, parties: [Int32], endpoints: [String?], localClientIndex: Int32, session: String) throws {
         
         print("sk:" + privKey.serialize().toHexString())
@@ -93,12 +126,12 @@ final class tss_client_swiftTests: XCTestCase {
             throw TSSClientError.errorWithMessage("Additive shares don't sum up to private key")
         }
         
+        // denormalize shares
         var shares: [BigInt] = []
         for (partyIndex,additiveShare) in additiveShares.enumerated()
         {
             let partiesBigInt = parties.map({ BigInt($0) })
-            let coeff = try getDenormaliseCoeff(party: BigInt(partyIndex),parties: partiesBigInt)
-            let denormalizedShare = (additiveShare * coeff).modulus(modulusValueSigned)
+            let denormalizedShare = try denormalizeShare(additiveShare: additiveShare, parties: partiesBigInt, party: BigInt(partyIndex))
             shares.append(denormalizedShare)
         }
         
