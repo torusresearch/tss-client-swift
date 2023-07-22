@@ -4,6 +4,10 @@ import SwiftKeccak
 import SocketIO
 import BigInt
 
+let CURVE_N: String = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+var modulusValueUnsigned = BigUInt(CURVE_N, radix: 16)!
+var modulusValueSigned = BigInt(CURVE_N, radix: 16)!
+
 struct Msg {
     let session: String
     let sender: Int
@@ -120,7 +124,8 @@ public class TSSClient {
                 if let tsssocket = tsssocket
                 {
                     if let socket = tsssocket.socket {
-                        socket.emit("send_msg", with: [jsonData])
+                        print("sending message")
+                        socket.emit("send_msg", with: [jsonData], completion: {})
                         return true
                     }
                 }
@@ -152,7 +157,7 @@ public class TSSClient {
         for i in party_indexes
         {
             let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: i)
-            if tsssocket!.socket!.status != SocketIOStatus.connected && tsssocket!.socket!.sid.isEmpty == false
+            if tsssocket!.socket!.status != SocketIOStatus.connected && tsssocket!.socket!.sid == nil
             {
                 sockets.append(tsssocket!)
                 throw TSSClientError.errorWithMessage("socket not connected yet, session:" + session + ", party:" + String(i))
@@ -177,7 +182,7 @@ public class TSSClient {
                 for (j, item) in sockets.enumerated()
                 {
                     if j != self.index {
-                        endpoints.append("websocket:"+item.socket!.sid)
+                        endpoints.append("websocket:"+(item.socket!.sid ?? ""))
                     }
                 }
                 

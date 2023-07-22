@@ -1,7 +1,6 @@
 import XCTest
 import BigInt
 import SwiftKeccak
-
 @testable import tss_client_swift
 
 final class tss_client_swiftTests: XCTestCase {
@@ -209,10 +208,10 @@ final class tss_client_swiftTests: XCTestCase {
         let msg = "hello world"
         let msgHash = keccak(message: msg)
         let clientIndex =  Int32(parties - 1);
-        let testingRouteIdentifier = "testingShares";
         let randomKey = BigUInt(SECP256K1.generatePrivateKey()!)
         let random = BigInt(sign: .plus, magnitude: randomKey) + BigInt(Date().timeIntervalSince1970)
         let randomNonce = keccak(message: String(random))
+        let testingRouteIdentifier = "testingShares";
         let vid = "test_verifier_name" + Delimiters.Delimiter1 + "test_verifier_id"
         let session = testingRouteIdentifier + vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce + testingRouteIdentifier
         let sigs = try getSignatures()
@@ -222,10 +221,13 @@ final class tss_client_swiftTests: XCTestCase {
         
         let client = try TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: base64Share(share: share), pubKey: publicKey)
         
-        var connected = 0
+        let counterparties = try Counterparties(parties: "1,2,3")
+        let precompute = try client.precompute(parties: counterparties)
+        //var connected = 0
         // wait for socket connections
-        for party in partyIndexes {
-            while connected != (partyIndexes.count-1) {
+        /*
+        while connected != (partyIndexes.count-1) {
+            for party in partyIndexes {
                 if party != clientIndex {
                     let (_, socketConnection) = try TSSConnectionInfo.shared.lookupEndpoint(session: self.session, party: party)
                     if socketConnection == nil || socketConnection!.socket == nil {
@@ -238,6 +240,7 @@ final class tss_client_swiftTests: XCTestCase {
                 }
             }
         }
+         */
     }
 }
 

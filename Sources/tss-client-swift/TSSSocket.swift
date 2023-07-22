@@ -11,10 +11,30 @@ internal final class TSSSocket {
         self.party = party
         self.session = session
         if let url = url {
-            self.socketManager = SocketManager(socketURL: url, config: [.forceWebsockets(true),.reconnectAttempts(10),.reconnectWaitMax(10000)])
+            /*
+             let mgr = SocketManager(socketURL: URL(string: "http://127.0.0.1:8000/")!,
+                                     config: [
+                                         .log(true),
+                                         .compress,
+                                         .forceWebsockets(true),
+                                         .reconnectAttempts(0),
+                                         .reconnectWaitMax(10000),
+                                         .path("/socket.io/")
+                                     ] )
+             */
+            socketManager = SocketManager(socketURL: url, config: [.log(true),
+                                                                   .compress,
+                                                                   .forceWebsockets(true),.reconnectAttempts(0),.reconnectWaitMax(10000),.extraHeaders([ "sessionID": session]), .path("/socket.io/")])
             socket = socketManager!.defaultSocket
-            socket!.on(clientEvent: .connect, callback: {_,_ in })
-            socket!.on(clientEvent: .disconnect, callback: {_,_ in })
+            socket!.on(clientEvent: .error, callback: { _, _ in
+                print("socket error, party:" + String(party))
+            })
+            socket!.on(clientEvent: .connect, callback: {_,_ in
+                print("connected, party:" + String(party))
+            })
+            socket!.on(clientEvent: .disconnect, callback: {_,_ in
+                print("disconnected, party:" + String(party))
+            })
             socket!.on("precompute_complete", callback: { data ,_ in
                 if session != self.session {
                     return
