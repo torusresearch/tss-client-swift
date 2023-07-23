@@ -18,7 +18,7 @@ let package = Package(
         .package(name: "secp256k1", url: "https://github.com/Boilertalk/secp256k1.swift", from: "0.1.0"),
         .package(name: "SwiftKeccak", url: "https://github.com/bitflying/SwiftKeccak.git", from: "0.1.0"),
         //.package(name: "SocketIO", url: "https://github.com/socketio/socket.io-client-swift", //.upToNextMajor(from: "16.0.1"))
-        .package(name: "SocketIO", url: "https://github.com/socketio/socket.io-client-swift", .upToNextMajor(from: "15.0.0"))
+        .package(name: "SocketIO", url: "https://github.com/socketio/socket.io-client-swift", .upToNextMajor(from: "16.0.1"))
     ],
     targets: [
         .binaryTarget(name: "libdkls",

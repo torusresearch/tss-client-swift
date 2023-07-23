@@ -26,29 +26,20 @@ final class socketTests: XCTestCase {
                                 config: [
                                     .log(true),
                                     .compress,
-                                    //.forceWebsockets(true),
+                                    .forceWebsockets(true),
                                     //.forcePolling(true),
                                     .reconnects(true),
                                     .reconnectWaitMax(10000),
                                     //.path("/socket.io/"),
                                 ] )
-        let sock = mgr.socket(forNamespace: "/")
         mgr.defaultSocket.on(clientEvent: .connect, callback: { data, ack in
             print("this client connected successfully")
+            mgr.defaultSocket.emit("precompute", with: [], completion: {})
+            print("socket status:")
+            print(mgr.defaultSocket.status)
         })
-        mgr.connectSocket(sock)
-        /*
-        mgr.defaultSocket.connect(timeoutAfter: 5, withHandler: ({}))
-        mgr.defaultSocket.emit("send_msg", with: [["poke": "poke"]], completion: {})
-        while mgr.defaultSocket.status != SocketIOStatus.connected
-        {
-            
-        }
-        mgr.defaultSocket.emit("send_msg", with: [["poke": "poke"]], completion: {})
-         */
-        while sock.status != SocketIOStatus.connected {
-            
-        }
+        mgr.defaultSocket.connect()
+        dispatchMain()
     }
 }
 
