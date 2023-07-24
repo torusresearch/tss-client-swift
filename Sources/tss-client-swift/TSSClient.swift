@@ -238,8 +238,8 @@ public class TSSClient {
         
         var signingMessage = ""
         if (hashOnly) {
-            let hash = self.hashMessage(message: message)
-            if self.hashMessage(message: original_message) != hash {
+            let hash = TSSHelpers.hashMessage(message: message)
+            if TSSHelpers.hashMessage(message: original_message) != hash {
                 throw TSSClientError.errorWithMessage("hash of original message does not match message")
             }
             signingMessage = hash.toBase64()
@@ -324,10 +324,6 @@ public class TSSClient {
     // returns a full signature using fragments and precompute
     public func verifyWithPrecompute(message: String, hashOnly: Bool, precompute: Precompute, fragments: SignatureFragments, pubKey: String) throws -> String {
         return try Utilities.localVerify(message: message, hashOnly: hashOnly, precompute: precompute, signatureFragments: fragments, pubKey: pubKey)
-    }
-    
-    private func hashMessage(message: String) -> String {
-        return keccak256(message).hexString
     }
     
     public func cleanup() throws {
