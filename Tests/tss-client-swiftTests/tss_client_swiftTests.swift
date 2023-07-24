@@ -183,31 +183,26 @@ final class tss_client_swiftTests: XCTestCase {
         return (endPoints, tssWSEndpoints, partyIndexes)
     }
     
-    func testExample() {
-        let expectation = XCTestExpectation()
-        DispatchQueue.main.async { // scheduled after subject.handleResp
-            let parties = 4
-            let msg = "hello world"
-            let msgHash = TSSHelpers.hashMessage(message: msg)
-            let clientIndex =  Int32(parties - 1);
-            let randomKey = BigUInt(SECP256K1.generatePrivateKey()!)
-            let random = BigInt(sign: .plus, magnitude: randomKey) + BigInt(Date().timeIntervalSince1970)
-            let randomNonce = TSSHelpers.hashMessage(message: String(random))
-            let testingRouteIdentifier = "testingShares";
-            let vid = "test_verifier_name" + Delimiters.Delimiter1 + "test_verifier_id"
-            let session = //testingRouteIdentifier +
-            vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce
-            //+ testingRouteIdentifier
-            let sigs = try! self.getSignatures()
-            
-            let (endpoints, socketEndpoints, partyIndexes) = self.generateEndpoints(parties: parties, clientIndex: clientIndex)
-            let (privateKey, publicKey) = try! self.setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
-            
-            let client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: TSSHelpers.base64Share(share: self.share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
-            expectation.fulfill()
-            }
-        wait(for: [expectation], timeout: 60.0)
-        //dispatchMain()
+    func testExample() throws {
+        let parties = 4
+        let msg = "hello world"
+        let msgHash = TSSHelpers.hashMessage(message: msg)
+        let clientIndex =  Int32(parties - 1);
+        let randomKey = BigUInt(SECP256K1.generatePrivateKey()!)
+        let random = BigInt(sign: .plus, magnitude: randomKey) + BigInt(Date().timeIntervalSince1970)
+        let randomNonce = TSSHelpers.hashMessage(message: String(random))
+        let testingRouteIdentifier = "testingShares";
+        let vid = "test_verifier_name" + Delimiters.Delimiter1 + "test_verifier_id"
+        let session = //testingRouteIdentifier +
+        vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce
+        //+ testingRouteIdentifier
+        let sigs = try getSignatures()
+        
+        let (endpoints, socketEndpoints, partyIndexes) = generateEndpoints(parties: parties, clientIndex: clientIndex)
+        let (privateKey, publicKey) = try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
+        
+        let client = try TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
+        dispatchMain()
         //let counterparties = try Counterparties(parties: "1,2,3")
         //let precompute = try client.precompute(parties: counterparties)
         //var connected = 0
