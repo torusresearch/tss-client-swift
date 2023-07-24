@@ -96,7 +96,6 @@ public class TSSClient {
                     count += 1
                 }
             }
-            
             let result = message?.msgData ?? ""
             return (result as NSString).utf8String
         }
@@ -114,20 +113,12 @@ public class TSSClient {
             Utilities.CStringFree(ptr: cast)
             
             do {
-                let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
-                let msg: [String: Any] = [
-                    "session": session,
-                    "sender": index,
-                    "recipient": recipient,
-                    "msg_type": msgType,
-                    "msg_data": msgData]
-                                          
-                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
+                let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient+1))
+                let msg = TssSendMsg(session: session, index: String(index), receipient: String(recipient), msg_type: msgType, msg_data: msgData)
                 if let tsssocket = tsssocket
                 {
                     if tsssocket.socketManager != nil {
-                        print("sending message")
-                        tsssocket.socketManager!.defaultSocket.emit("send_msg", with: [jsonData], completion: {})
+                        tsssocket.socketManager!.defaultSocket.emit("send_msg", msg, completion: {})
                         return true
                     }
                 }
