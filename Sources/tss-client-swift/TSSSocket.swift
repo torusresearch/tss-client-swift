@@ -54,6 +54,7 @@ internal final class TSSSocket {
             EventQueue.shared.addEvent(event: Event(message: party, session: session, occurred: Date(), type: EventType.PrecomputeComplete))
         })
         socket.on("send", callback: {data ,_ in
+            print("received message!!!")
             if session != self.session {
                 return
             }

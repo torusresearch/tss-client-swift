@@ -83,19 +83,19 @@ public class TSSClient {
             var message: Message? = nil
             var found = false
             var count = 0
-            Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { (timer) in
-                if !found {
+            //let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { (timer) in
+            while !found {
                     if let msg = MessageQueue.shared.findMessage(session: session, sender: remote, recipient: index, messageType: msgType) {
                             message = msg
                             found = true
-                            timer.invalidate()
+                            //timer.invalidate()
                     }
                     if count == 5 {
-                        timer.invalidate()
+                        //timer.invalidate()
                     }
                     count += 1
                 }
-            }
+            //}
             let result = message?.msgData ?? ""
             return (result as NSString).utf8String
         }
@@ -140,7 +140,7 @@ public class TSSClient {
     }
     
     // calculates a precompute, each party calculates their own precompute
-    public func precompute(parties: Counterparties) throws -> Precompute {
+    public func precompute(parties: Counterparties, serverCoeffs: [String], signatures: [String]) throws -> Precompute {
         EventQueue.shared.updateFocus(time: Date())
         let parties_str = try parties.export()
         let parties_array = parties_str.components(separatedBy: ",")
@@ -192,8 +192,10 @@ public class TSSClient {
                     "player_index": party,
                     "threshold": self.parties,
                     "pubkey": self.pubKey,
-                    "notifyWebsocketId": tssSocket?.socketManager?.defaultSocket.sid ?? "",
-                    "sendWebsocket": tssSocket?.socketManager?.defaultSocket.sid ?? ""
+                    "notifyWebsocketId": tssSocket!.socketManager!.defaultSocket.sid ?? "",
+                    "sendWebsocket": tssSocket!.socketManager!.defaultSocket.sid ?? "",
+                    "server_coeffs": serverCoeffs,
+                    "signatures": signatures
                 ]
                 
                 let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
