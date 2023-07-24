@@ -201,28 +201,33 @@ final class tss_client_swiftTests: XCTestCase {
         let (endpoints, socketEndpoints, partyIndexes) = generateEndpoints(parties: parties, clientIndex: clientIndex)
         let (privateKey, publicKey) = try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
         
-        let client = try TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
-        dispatchMain()
-        //let counterparties = try Counterparties(parties: "1,2,3")
-        //let precompute = try client.precompute(parties: counterparties)
-        //var connected = 0
-        // wait for socket connections
-        /*
-        while connected != (partyIndexes.count-1) {
-            for party in partyIndexes {
-                if party != clientIndex {
-                    let (_, socketConnection) = try TSSConnectionInfo.shared.lookupEndpoint(session: self.session, party: party)
-                    if socketConnection == nil || socketConnection!.socket == nil {
-                        continue
+        var client: TSSClient?
+        var connections = 0
+        
+        let expectation = XCTestExpectation()
+        DispatchQueue.main.async {
+            
+            client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: TSSHelpers.base64Share(share: self.share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
+            DispatchQueue.global().async {
+                while connections < parties-1
+                {
+                    for party in partyIndexes {
+                        if party != clientIndex {
+                            let (_, socketConnection) = try! TSSConnectionInfo.shared.lookupEndpoint(session: self.session, party: party)
+                            if socketConnection == nil || socketConnection!.socket == nil {
+                                continue
+                            }
+                            if socketConnection!.socket!.status == .connected
+                            {
+                                connections += 1
+                            }
+                        }
                     }
-                    if socketConnection!.socket!.status == .connected
-                    {
-                        connected += 1
-                    }
+                    expectation.fulfill()
                 }
             }
         }
-         */
+        wait(for: [expectation], timeout: 60.0)
     }
 }
 
