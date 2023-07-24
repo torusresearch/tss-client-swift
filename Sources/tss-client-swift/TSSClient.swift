@@ -163,7 +163,7 @@ public class TSSClient {
                 
         }
         
-        for party in 1...(self.parties-1) {
+        for party in 1..<self.parties {
             if party != index {
                 let (tssUrl, tssSocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(party))
                 let urlSession = URLSession.shared

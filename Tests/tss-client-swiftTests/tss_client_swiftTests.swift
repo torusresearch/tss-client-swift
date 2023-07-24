@@ -197,8 +197,8 @@ final class tss_client_swiftTests: XCTestCase {
 
         var coeffs: [String] = []
         let participatingServerDKGIndexes: [Int] = [1,2,3]
-        for item in participatingServerDKGIndexes {
-            let index = BigInt(item).serialize().suffix(32).hexString
+        for _ in participatingServerDKGIndexes {
+            let index = BigInt(1).serialize().suffix(32).hexString
             coeffs.append(index)
         }
         
