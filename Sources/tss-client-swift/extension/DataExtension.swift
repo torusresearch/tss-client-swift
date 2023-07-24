@@ -8,6 +8,7 @@
 import Foundation
 
 public extension Data {
+
     init?(hexString: String) {
         let length = hexString.count / 2
         var data = Data(capacity: length)

@@ -193,17 +193,18 @@ final class tss_client_swiftTests: XCTestCase {
         let randomNonce = TSSHelpers.hashMessage(message: String(random))
         let testingRouteIdentifier = "testingShares";
         let vid = "test_verifier_name" + Delimiters.Delimiter1 + "test_verifier_id"
-        let session = testingRouteIdentifier + vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce + testingRouteIdentifier
+        let session = //testingRouteIdentifier +
+        vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce
+        //+ testingRouteIdentifier
         let sigs = try getSignatures()
         
         let (endpoints, socketEndpoints, partyIndexes) = generateEndpoints(parties: parties, clientIndex: clientIndex)
         let (privateKey, publicKey) = try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
         
         let client = try TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: TSSHelpers.base64Share(share: share), pubKey: publicKey)
-        
-        let counterparties = try Counterparties(parties: "1,2,3")
-        let precompute = try client.precompute(parties: counterparties)
         dispatchMain()
+        //let counterparties = try Counterparties(parties: "1,2,3")
+        //let precompute = try client.precompute(parties: counterparties)
         //var connected = 0
         // wait for socket connections
         /*

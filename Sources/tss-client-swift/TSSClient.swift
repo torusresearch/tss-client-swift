@@ -55,15 +55,17 @@ public class TSSClient {
         if parties.count != endpoints.count {
             throw TSSClientError.errorWithMessage("Parties and endpoint length must be equal")
         }
-        
-        for (index,item) in endpoints.enumerated() {
-            TSSConnectionInfo.shared.addInfo(session: session, party: Int32(index+1), endpoint: item, socketUrl: tssSocketEndpoints[index])
-        }
 
         self.index = index
         self.session = session
         self.parties = parties.count
         self.pubKey = pubKey
+        
+        for (index,item) in endpoints.enumerated() {
+            if index != self.index {
+                TSSConnectionInfo.shared.addInfo(session: session, party: Int32(index+1), endpoint: item, socketUrl: tssSocketEndpoints[index])
+            }
+        }
         
         let readMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?) -> UnsafePointer<CChar>?)? = { sessionCString, index, remote, msgTypeCString in
             let session = String.init(cString: sessionCString!)

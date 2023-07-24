@@ -1,4 +1,5 @@
 import Foundation
+import BigInt
 import SocketIO
 
 internal final class TSSSocket {
@@ -9,22 +10,18 @@ internal final class TSSSocket {
     
     init(session: String, party: Int32, url: URL?) {
         self.party = party
-        self.session = session
-        if let url = url {
-            /*
-             let mgr = SocketManager(socketURL: URL(string: "http://127.0.0.1:8000/")!,
-                                     config: [
-                                         .log(true),
-                                         .compress,
-                                         .forceWebsockets(true),
-                                         .reconnectAttempts(0),
-                                         .reconnectWaitMax(10000),
-                                         .path("/socket.io/")
-                                     ] )
-             */
-            socketManager = SocketManager(socketURL: url, config: [.log(true),
-                                                                   .compress,
-                                                                   .forceWebsockets(true),.reconnectAttempts(0),.reconnectWaitMax(10000),.extraHeaders([ "sessionID": session]), .path("/socket.io/")])
+        self.session = session.components(separatedBy: Delimiters.Delimiter4)[1]
+            socketManager = SocketManager(socketURL: url!,
+                                    config: [
+                                        .log(true),
+                                        .compress,
+                                        .forceWebsockets(true),
+                                        .reconnectAttempts(0),
+                                        .reconnectWaitMax(10000),
+                                        //.path("/tss/socket.io/"),
+                                        .connectParams(["sessionId" : self.session])
+                                    ])
+            
             socket = socketManager!.defaultSocket
             socket!.on(clientEvent: .error, callback: { _, _ in
                 print("socket error, party:" + String(party))
@@ -66,6 +63,5 @@ internal final class TSSSocket {
                 MessageQueue.shared.addMessage(msg: Message(session: session, sender: sender, recipient: recipient, msgType: msg_type, msgData: msg_data))
             })
             socket!.connect()
-        }
     }
 }
