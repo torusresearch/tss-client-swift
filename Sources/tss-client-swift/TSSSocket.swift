@@ -54,17 +54,13 @@ internal final class TSSSocket {
             EventQueue.shared.addEvent(event: Event(message: party, session: session, occurred: Date(), type: EventType.PrecomputeComplete))
         })
         socket.on("send", callback: {data ,_ in
-            print("received message!!!")
             if session != self.session {
                 return
             }
             
-            let session = data[0] as! String
-            let sender = data[1] as! UInt64
-            let recipient = data[2] as! UInt64
-            let msg_type = data[3] as! String
-            let msg_data = data[4] as! String
-            MessageQueue.shared.addMessage(msg: Message(session: session, sender: sender, recipient: recipient, msgType: msg_type, msgData: msg_data))
+            let json = try! JSONSerialization.data(withJSONObject:data[0])
+            let msg = try! JSONDecoder().decode(TssRecvMsg.self, from: json)
+            MessageQueue.shared.addMessage(msg: Message(session: msg.session, sender:  UInt64(exactly: msg.sender)!, recipient: UInt64(exactly: msg.recipient)!, msgType: msg.msg_type, msgData: msg.msg_data))
         })
         socket.connect()
     }

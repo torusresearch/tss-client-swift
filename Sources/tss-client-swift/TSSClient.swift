@@ -114,7 +114,7 @@ public class TSSClient {
             
             do {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient+1))
-                let msg = TssSendMsg(session: session, index: String(index), receipient: String(recipient), msg_type: msgType, msg_data: msgData)
+                let msg = TssSendMsg(session: session, index: String(index), recipient: String(recipient), msg_type: msgType, msg_data: msgData)
                 if let tsssocket = tsssocket
                 {
                     if tsssocket.socketManager != nil {
@@ -188,7 +188,7 @@ public class TSSClient {
                 let msg: [String: Any]  = [
                     "endpoints": endpoints,
                     "session": session,
-                    "parties": Array(1...self.parties),
+                    "parties": Array(0..<self.parties),
                     "player_index": party,
                     "threshold": self.parties,
                     "pubkey": self.pubKey,
