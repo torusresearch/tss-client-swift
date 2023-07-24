@@ -152,14 +152,14 @@ final class tss_client_swiftTests: XCTestCase {
         }
     }
     
-    private func setupMockShares(endpoints: [String?], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data, String)
+    private func setupMockShares(endpoints: [String?], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data, Data)
     {
         let privKey = SECP256K1.generatePrivateKey()!
         let privKeyBigUInt = BigUInt(privKey)
         let privKeyBigInt = BigInt(sign: .plus, magnitude: privKeyBigUInt)
         let publicKey = SECP256K1.privateToPublic(privateKey: privKey, compressed: false)!
         try distributeShares(privKey: privKeyBigInt, parties: parties, endpoints: endpoints, localClientIndex: localClientIndex, session: session)
-        return (privKey, try TSSHelpers.base64PublicKey(pubKey: publicKey))
+        return (privKey, publicKey)
     }
     
     private func generateEndpoints(parties: Int, clientIndex: Int32) -> ([String?],[String?],[Int32]) {
@@ -201,7 +201,7 @@ final class tss_client_swiftTests: XCTestCase {
         let (endpoints, socketEndpoints, partyIndexes) = generateEndpoints(parties: parties, clientIndex: clientIndex)
         let (privateKey, publicKey) = try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
         
-        let client = try TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: TSSHelpers.base64Share(share: share), pubKey: publicKey)
+        let client = try TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
         dispatchMain()
         //let counterparties = try Counterparties(parties: "1,2,3")
         //let precompute = try client.precompute(parties: counterparties)
