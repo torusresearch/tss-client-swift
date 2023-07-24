@@ -21,7 +21,6 @@ internal final class TSSSocket {
                                         //.path("/tss/socket.io/"),
                                         .connectParams(["sessionId" : self.session])
                                     ])
-            
             socket = socketManager!.defaultSocket
             socket!.on(clientEvent: .error, callback: { _, _ in
                 print("socket error, party:" + String(party))
