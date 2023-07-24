@@ -125,9 +125,9 @@ public class TSSClient {
                 let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
                 if let tsssocket = tsssocket
                 {
-                    if let socket = tsssocket.socket {
+                    if tsssocket.socketManager != nil {
                         print("sending message")
-                        socket.emit("send_msg", with: [jsonData], completion: {})
+                        tsssocket.socketManager!.defaultSocket.emit("send_msg", with: [jsonData], completion: {})
                         return true
                     }
                 }
@@ -156,22 +156,26 @@ public class TSSClient {
         let party_indexes = parties_array.map { Int32($0)!}
         
         var sockets: [TSSSocket] = []
+        print(party_indexes)
         for i in party_indexes
         {
-            let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: i)
-            if tsssocket!.socket!.status != SocketIOStatus.connected && tsssocket!.socket!.sid == nil
+            let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: i-1)
+            if tsssocket!.socketManager !== nil
             {
-                sockets.append(tsssocket!)
-                throw TSSClientError.errorWithMessage("socket not connected yet, session:" + session + ", party:" + String(i))
+                if tsssocket!.socketManager!.defaultSocket.status != SocketIOStatus.connected && tsssocket!.socketManager!.defaultSocket.sid != nil {
+                    sockets.append(tsssocket!)
+                } else {
+                    throw TSSClientError.errorWithMessage("socket not connected yet, session:" + session + ", party:" + String(i))
+                }
             }
-            
+                
         }
         
         for party in 0..<self.parties {
             if party != index {
-                let (tssUrl,tssSocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(party))
+                let (tssUrl, tssSocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(party))
                 let urlSession = URLSession.shared
-                let url = URL(string: tssUrl!.url!.absoluteString + "precompute")!
+                let url = URL(string: tssUrl!.url!.absoluteString + "/precompute")!
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
@@ -184,20 +188,22 @@ public class TSSClient {
                 for (j, item) in sockets.enumerated()
                 {
                     if j != self.index {
-                        endpoints.append("websocket:"+(item.socket!.sid ?? ""))
+                        endpoints.append("websocket:"+(item.socketManager?.defaultSocket.sid ?? ""))
                     }
                 }
+                
                 
                 let msg: [String: Any]  = [
                     "endpoints": endpoints,
                     "session": session,
-                    "parties": [(1...self.parties)],
+                    "parties": Array(1...self.parties),
                     "player_index": party,
                     "threshold": self.parties,
                     "pubkey": self.pubKey,
-                    "notifyWebsocketId": tssSocket!.socket!.sid,
-                    "sendWebsocket": tssSocket!.socket!.sid
+                    "notifyWebsocketId": tssSocket?.socketManager?.defaultSocket.sid ?? "",
+                    "sendWebsocket": tssSocket?.socketManager?.defaultSocket.sid ?? ""
                 ]
+                
                 let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
 
                 request.httpBody = jsonData
@@ -254,7 +260,7 @@ public class TSSClient {
         {
             let (tssConnection,_) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
             let urlSession = URLSession.shared
-            let url = URL(string: tssConnection!.url!.absoluteString + "send")!
+            let url = URL(string: tssConnection!.url!.absoluteString + "/send")!
             var request = URLRequest(url: url)
             request.httpMethod = "POST"
             request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
@@ -339,7 +345,7 @@ public class TSSClient {
             if i != index {
                 let (tssConnection,_) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
                 let urlSession = URLSession.shared
-                let url = URL(string: tssConnection!.url!.absoluteString + "cleanup")!
+                let url = URL(string: tssConnection!.url!.absoluteString + "/cleanup")!
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")

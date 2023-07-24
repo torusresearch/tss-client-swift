@@ -30,14 +30,8 @@ internal final class EventQueue {
     }
     
     public func updateFocus(time: Date) {
-        queue.sync {
-            lastFocus = time
-            removeStaleEvents(time: time)
-        }
-    }
-    
-    private func removeStaleEvents(time: Date) {
         queue.sync(flags: .barrier) {
+            lastFocus = time
             events.removeAll(where: { $0.occurred < time})
         }
     }

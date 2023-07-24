@@ -202,22 +202,22 @@ final class tss_client_swiftTests: XCTestCase {
         let (privateKey, publicKey) = try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
         
         var client: TSSClient?
+        var precompute: Precompute?
         var connections = 0
         
-        let expectation = XCTestExpectation()
+        var expectation = XCTestExpectation()
         DispatchQueue.main.async {
-            
             client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: TSSHelpers.base64Share(share: self.share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
             DispatchQueue.global().async {
-                while connections < parties-1
+                while connections < parties
                 {
                     for party in partyIndexes {
                         if party != clientIndex {
                             let (_, socketConnection) = try! TSSConnectionInfo.shared.lookupEndpoint(session: self.session, party: party)
-                            if socketConnection == nil || socketConnection!.socket == nil {
+                            if socketConnection == nil || socketConnection!.socketManager == nil {
                                 continue
                             }
-                            if socketConnection!.socket!.status == .connected
+                            if socketConnection!.socketManager!.defaultSocket.status == .connected
                             {
                                 connections += 1
                             }
@@ -225,6 +225,19 @@ final class tss_client_swiftTests: XCTestCase {
                     }
                     expectation.fulfill()
                 }
+            }
+        }
+        wait(for: [expectation], timeout: 60.0)
+        
+        expectation = XCTestExpectation()
+        DispatchQueue.main.async {
+            let counterparties = try! Counterparties(parties: "1,2")
+            precompute = try! client!.precompute(parties: counterparties)
+            DispatchQueue.global().async {
+                while !(try! client!.isReady()) {
+                    
+                }
+                expectation.fulfill()
             }
         }
         wait(for: [expectation], timeout: 60.0)

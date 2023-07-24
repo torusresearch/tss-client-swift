@@ -4,8 +4,8 @@ import SocketIO
 internal final class TSSConnectionInfo {
     //singleton class
     static let shared = TSSConnectionInfo()
-    private var endpoints: [TSSEndpoint] = []
-    private var socketManagers: [TSSSocket] = []
+    private(set) var endpoints: [TSSEndpoint] = []
+    private(set) var socketManagers: [TSSSocket] = []
     
     private var queue = DispatchQueue(label: "tss.messages.queue", attributes: .concurrent)
     
@@ -19,15 +19,20 @@ internal final class TSSConnectionInfo {
     }
     
     public func lookupEndpoint(session: String, party: Int32) throws -> (TSSEndpoint?, TSSSocket?) {
-        return (nil, nil)
+        queue.sync(flags: .barrier) {
+            let index = Int(party)
+            let endpoint = endpoints[index]
+            let socketManager = socketManagers[index]
+            return (endpoint, socketManager)
+        }
     }
     
     public func removeInfo(session: String, party: Int32) {
         queue.sync(flags: .barrier) {
             endpoints.removeAll(where: { $0.session == session && $0.party == party })
             if let i = socketManagers.firstIndex(where: { $0.session == session && $0.party == party }) {
-                if let socket = socketManagers[i].socket {
-                    socket.disconnect()
+                if socketManagers[i].socketManager !== nil {
+                    socketManagers[i].socketManager!.defaultSocket.disconnect()
                 }
                 socketManagers.remove(at: i)
             }
