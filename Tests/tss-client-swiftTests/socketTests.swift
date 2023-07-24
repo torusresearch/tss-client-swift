@@ -35,7 +35,10 @@ final class socketTests: XCTestCase {
             })
             mgr.defaultSocket.connect()
             DispatchQueue.global().async {
-                while !connected && !disconnected {
+                while !connected {
+                // no-op
+                }
+                while !disconnected {
                 // no-op
                 }
                 expectation.fulfill()
