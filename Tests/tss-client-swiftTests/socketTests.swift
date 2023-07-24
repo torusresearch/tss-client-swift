@@ -5,15 +5,9 @@ import SwiftKeccak
 import XCTest
 
 final class socketTests: XCTestCase {
-    struct Delimiters {
-        static let Delimiter1 = "\u{001c}"
-        static let Delimiter2 = "\u{0015}"
-        static let Delimiter3 = "\u{0016}"
-        static let Delimiter4 = "\u{0017}"
-    }
-
     func testSocket() throws {
         var connected = false;
+        var disconnected = false;
         let expectation = XCTestExpectation()
         DispatchQueue.main.async {
             let randomKey = BigUInt(SECP256K1.generatePrivateKey()!)
@@ -32,13 +26,16 @@ final class socketTests: XCTestCase {
             mgr.defaultSocket.on(clientEvent: .connect, callback: { _, _ in
                 mgr.defaultSocket.emit("hello", with: [], completion: {})
             })
+            mgr.defaultSocket.on(clientEvent: .disconnect, callback: { _, _ in
+                disconnected = mgr.defaultSocket.status == .disconnected
+            })
             mgr.defaultSocket.on("greet", callback: { _, _ in
-                print("server greeted socket")
                 connected = mgr.defaultSocket.status == .connected
+                mgr.defaultSocket.disconnect()
             })
             mgr.defaultSocket.connect()
             DispatchQueue.global().async {
-                while !connected {
+                while !connected && !disconnected {
                 // no-op
                 }
                 expectation.fulfill()
@@ -47,5 +44,6 @@ final class socketTests: XCTestCase {
         }
         wait(for: [expectation], timeout: 60.0)
         XCTAssertEqual(connected, true)
+        XCTAssertEqual(disconnected, true)
     }
 }
