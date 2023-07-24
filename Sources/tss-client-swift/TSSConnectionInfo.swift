@@ -20,10 +20,15 @@ internal final class TSSConnectionInfo {
     
     public func lookupEndpoint(session: String, party: Int32) throws -> (TSSEndpoint?, TSSSocket?) {
         queue.sync(flags: .barrier) {
-            let index = Int(party)
-            let endpoint = endpoints[index]
-            let socketManager = socketManagers[index]
-            return (endpoint, socketManager)
+            var mgr: TSSSocket? = nil
+            if let mgrIndex = socketManagers.firstIndex(where: { $0.session == session && $0.party == party }) {
+                mgr =  socketManagers[mgrIndex]
+            }
+            var endpoint: TSSEndpoint? = nil
+            if let endpointIndex = endpoints.firstIndex(where: { $0.session == session && $0.party == party }) {
+                endpoint = endpoints[endpointIndex]
+            }
+            return (endpoint, mgr)
         }
     }
     

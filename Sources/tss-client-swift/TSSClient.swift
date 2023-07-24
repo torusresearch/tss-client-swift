@@ -159,13 +159,13 @@ public class TSSClient {
         print(party_indexes)
         for i in party_indexes
         {
-            let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: i-1)
+            let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: i)
             if tsssocket!.socketManager !== nil
             {
                 if tsssocket!.socketManager!.defaultSocket.status != SocketIOStatus.connected && tsssocket!.socketManager!.defaultSocket.sid != nil {
                     sockets.append(tsssocket!)
                 } else {
-                    throw TSSClientError.errorWithMessage("socket not connected yet, session:" + session + ", party:" + String(i))
+                    throw TSSClientError.errorWithMessage("socket not connected yet, party:" + String(i)+", session:" + session)
                 }
             }
                 

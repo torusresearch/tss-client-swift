@@ -1,7 +1,8 @@
-import XCTest
 import BigInt
+@testable import SocketIO
 import SwiftKeccak
 @testable import tss_client_swift
+import XCTest
 
 final class tss_client_swiftTests: XCTestCase {
     struct Delimiters {
@@ -10,53 +11,52 @@ final class tss_client_swiftTests: XCTestCase {
         static let Delimiter3 = "\u{0016}"
         static let Delimiter4 = "\u{0017}"
     }
-    
+
     // this will only work for local testing with local servers
     let privateKeys = [
-      "da4841d60f47652584aea0ab578660b353dbcd6907940ed0a295c9d95aabadd0",
-      "e7ef4a9dcc9c0305ec9e56c79128f5c12413b976309368c35c11f3297459994b",
-      "31534072a75a1d8b7f07c1f29930533ae44166f44ce08a4a23126b6dcb8b6efe",
-      "f2588097a5df3911e4826e13dce2b6f4afb798bb8756675b17d4195db900af20",
-      "5513438cd00c901ff362e25ae08aa723495bea89ab5a53ce165730bc1d9a0280"
-    ];
-    
+        "da4841d60f47652584aea0ab578660b353dbcd6907940ed0a295c9d95aabadd0",
+        "e7ef4a9dcc9c0305ec9e56c79128f5c12413b976309368c35c11f3297459994b",
+        "31534072a75a1d8b7f07c1f29930533ae44166f44ce08a4a23126b6dcb8b6efe",
+        "f2588097a5df3911e4826e13dce2b6f4afb798bb8756675b17d4195db900af20",
+        "5513438cd00c901ff362e25ae08aa723495bea89ab5a53ce165730bc1d9a0280",
+    ]
+
     var session = ""
-    var share : BigInt = BigInt.zero
-    
-    private func getSignatures() throws -> [Any]
-    {
+    var share: BigInt = BigInt.zero
+
+    private func getSignatures() throws -> [Any] {
         let tokenData: [String: Any] = [
-            "exp": Date().addingTimeInterval(3000*60).timeIntervalSince1970,
+            "exp": Date().addingTimeInterval(3000 * 60).timeIntervalSince1970,
             "temp_key_x": "test_key_x",
             "temp_key_y": "test_key_y",
             "verifier_name": "test_verifier_name",
-            "verifier_id": "test_verifier_id"
+            "verifier_id": "test_verifier_id",
         ]
-        
-        let token =  Data(try JSONSerialization.data(withJSONObject: tokenData)).base64EncodedString()
-        
+
+        let token = Data(try JSONSerialization.data(withJSONObject: tokenData)).base64EncodedString()
+
         var sigs: [Any] = []
         for item in privateKeys {
             let hash = TSSHelpers.hashMessage(message: token)
             let (serializedNodeSig, _) = SECP256K1.signForRecovery(hash: Data(hex: hash), privateKey: Data(hex: item))
             let unmarshaled = SECP256K1.unmarshalSignature(signatureData: serializedNodeSig!)!
-            let sig = unmarshaled.r.hexString+unmarshaled.s.hexString+String(format:"%02X", unmarshaled.v)
-            let msg: [String: Any]  = [
+            let sig = unmarshaled.r.hexString + unmarshaled.s.hexString + String(format: "%02X", unmarshaled.v)
+            let msg: [String: Any] = [
                 "data": token,
                 "sig": sig,
             ]
             let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
             sigs.append(jsonData)
         }
-        
+
         return sigs
     }
-    
+
     private func getLagrangeCoefficients(parties: [BigInt], party: BigInt) throws -> BigInt {
         let partyIndex = party + 1
         var upper = BigInt(1)
         var lower = BigInt(1)
-        for i in (0..<parties.count) {
+        for i in 0 ..< parties.count {
             let otherParty = parties[i]
             let otherPartyIndex = otherParty + 1
             if party != otherParty {
@@ -67,7 +67,7 @@ final class tss_client_swiftTests: XCTestCase {
                 lower = (lower * temp).modulus(modulusValueSigned)
             }
         }
-        
+
         let lowerInverse = lower.inverse(modulusValueSigned)
         if lowerInverse == nil {
             throw TSSClientError.errorWithMessage("No modular inverse for lower when calculating lagrange coefficients")
@@ -75,7 +75,7 @@ final class tss_client_swiftTests: XCTestCase {
         let delta = (upper * lowerInverse!).modulus(modulusValueSigned)
         return delta
     }
-    
+
     private func denormalizeShare(additiveShare: BigInt, parties: [BigInt], party: BigInt) throws -> BigInt {
         let coeff = try getLagrangeCoefficients(parties: parties, party: party)
         let coeffInverse = coeff.inverse(modulusValueSigned)
@@ -84,43 +84,39 @@ final class tss_client_swiftTests: XCTestCase {
         }
         return (additiveShare * coeffInverse!).modulus(modulusValueSigned)
     }
-    
+
     private func distributeShares(privKey: BigInt, parties: [Int32], endpoints: [String?], localClientIndex: Int32, session: String) throws {
-        var additiveShares: [BigInt] = [];
+        var additiveShares: [BigInt] = []
         var shareSum = BigInt.zero
-        for _ in (0..<(parties.count-1))
-        {
+        for _ in 0 ..< (parties.count - 1) {
             let shareBigUint = BigUInt(SECP256K1.generatePrivateKey()!)
             let shareBigInt = BigInt(sign: .plus, magnitude: shareBigUint)
             print("share:" + shareBigInt.serialize().toHexString())
             additiveShares.append(shareBigInt)
             shareSum += shareBigInt
         }
-        
+
         let finalShare = (privKey - shareSum.modulus(modulusValueSigned)).modulus(modulusValueSigned)
         additiveShares.append(finalShare)
-        
+
         print(additiveShares)
-        
+
         let reduced = additiveShares.reduce(0) {
             ($0 + $1).modulus(modulusValueSigned)
         }
-        if reduced.serialize().toHexString() != privKey.serialize().toHexString()
-        {
+        if reduced.serialize().toHexString() != privKey.serialize().toHexString() {
             throw TSSClientError.errorWithMessage("Additive shares don't sum up to private key")
         }
-        
+
         // denormalize shares
         var shares: [BigInt] = []
-        for (partyIndex,additiveShare) in additiveShares.enumerated()
-        {
+        for (partyIndex, additiveShare) in additiveShares.enumerated() {
             let partiesBigInt = parties.map({ BigInt($0) })
             let denormalizedShare = try denormalizeShare(additiveShare: additiveShare, parties: partiesBigInt, party: BigInt(partyIndex))
             shares.append(denormalizedShare)
         }
-        
-        for i in (0..<parties.count)
-        {
+
+        for i in 0 ..< parties.count {
             let share = shares[i]
             if Int32(i) == localClientIndex {
                 self.share = share
@@ -134,24 +130,24 @@ final class tss_client_swiftTests: XCTestCase {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                let msg: [String: Any]  = [
+                let msg: [String: Any] = [
                     "session": session,
-                    "share": TSSHelpers.base64ToBase64url(base64: try TSSHelpers.base64Share(share: share))
+                    "share": TSSHelpers.base64ToBase64url(base64: try TSSHelpers.base64Share(share: share)),
                 ]
                 let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
-                
+
                 request.httpBody = jsonData
-                
-                let sem = DispatchSemaphore.init(value: 0)
+
+                let sem = DispatchSemaphore(value: 0)
                 // data, response, error
-                urlSession.dataTask(with: request) { _, _, error in
+                urlSession.dataTask(with: request) { _, _, _ in
                     sem.signal()
                 }.resume()
                 sem.wait()
             }
         }
     }
-    
+
     private func setupMockShares(endpoints: [String?], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data, Data)
     {
         let privKey = SECP256K1.generatePrivateKey()!
@@ -161,86 +157,69 @@ final class tss_client_swiftTests: XCTestCase {
         try distributeShares(privKey: privKeyBigInt, parties: parties, endpoints: endpoints, localClientIndex: localClientIndex, session: session)
         return (privKey, publicKey)
     }
-    
-    private func generateEndpoints(parties: Int, clientIndex: Int32) -> ([String?],[String?],[Int32]) {
+
+    private func generateEndpoints(parties: Int, clientIndex: Int32) -> ([String?], [String?], [Int32]) {
         var endPoints: [String?] = []
         var tssWSEndpoints: [String?] = []
         var partyIndexes: [Int32] = []
         var serverPortOffset = 0
         let basePort = 8000
-        for i in (0..<parties)
-        {
+        for i in 0 ..< parties {
             partyIndexes.append(Int32(i))
             if Int32(i) == clientIndex {
                 endPoints.append(nil)
                 tssWSEndpoints.append(nil)
             } else {
-                endPoints.append("http://localhost:"+String((basePort+serverPortOffset)))
-                tssWSEndpoints.append("http://localhost:"+String((basePort+serverPortOffset)))
+                endPoints.append("http://localhost:" + String(basePort + serverPortOffset))
+                tssWSEndpoints.append("http://localhost:" + String(basePort + serverPortOffset))
                 serverPortOffset += 1
             }
         }
         return (endPoints, tssWSEndpoints, partyIndexes)
     }
-    
+
     func testExample() throws {
         let parties = 4
         let msg = "hello world"
         let msgHash = TSSHelpers.hashMessage(message: msg)
-        let clientIndex =  Int32(parties - 1);
+        let clientIndex = Int32(parties-1)
         let randomKey = BigUInt(SECP256K1.generatePrivateKey()!)
         let random = BigInt(sign: .plus, magnitude: randomKey) + BigInt(Date().timeIntervalSince1970)
         let randomNonce = TSSHelpers.hashMessage(message: String(random))
-        let testingRouteIdentifier = "testingShares";
+        let testingRouteIdentifier = "testingShares"
         let vid = "test_verifier_name" + Delimiters.Delimiter1 + "test_verifier_id"
-        let session = //testingRouteIdentifier +
-        vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce
-        //+ testingRouteIdentifier
+        let session = // testingRouteIdentifier +
+            vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce
+        // + testingRouteIdentifier
         let sigs = try getSignatures()
-        
+
         let (endpoints, socketEndpoints, partyIndexes) = generateEndpoints(parties: parties, clientIndex: clientIndex)
         let (privateKey, publicKey) = try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
-        
-        var client: TSSClient?
-        var precompute: Precompute?
+
+        var client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
         var connections = 0
-        
-        var expectation = XCTestExpectation()
-        DispatchQueue.main.async {
-            client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "")} ), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "")} ), share: TSSHelpers.base64Share(share: self.share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
-            DispatchQueue.global().async {
-                while connections < parties
-                {
-                    for party in partyIndexes {
-                        if party != clientIndex {
-                            let (_, socketConnection) = try! TSSConnectionInfo.shared.lookupEndpoint(session: self.session, party: party)
-                            if socketConnection == nil || socketConnection!.socketManager == nil {
-                                continue
-                            }
-                            if socketConnection!.socketManager!.defaultSocket.status == .connected
-                            {
-                                connections += 1
-                            }
+        print(partyIndexes)
+        var connectedParties: [Int32] = []
+        while connections < (parties-1) {
+            for party in partyIndexes {
+                if party != clientIndex {
+                    if !connectedParties.contains(party) {
+                        let (_, socketConnection) = try! TSSConnectionInfo.shared.lookupEndpoint(session: self.session, party: party)
+                        if socketConnection == nil || socketConnection!.socketManager == nil {
+                            continue
+                        }
+                        if socketConnection!.socketManager!.defaultSocket.status == .connected {
+                            connections += 1
+                            print("party " + String(party) + " connected, socket id: " + (socketConnection!.socketManager!.defaultSocket.sid ?? "Undefined"))
+                            connectedParties.append(party)
                         }
                     }
-                    expectation.fulfill()
                 }
             }
         }
-        wait(for: [expectation], timeout: 60.0)
-        
-        expectation = XCTestExpectation()
-        DispatchQueue.main.async {
-            let counterparties = try! Counterparties(parties: "1,2")
-            precompute = try! client!.precompute(parties: counterparties)
-            DispatchQueue.global().async {
-                while !(try! client!.isReady()) {
-                    
-                }
-                expectation.fulfill()
-            }
-        }
-        wait(for: [expectation], timeout: 60.0)
+        print("active connections: " + String(connections))
+        let counterparties = try! Counterparties(parties: "1,2")
+        var precompute = try! client.precompute(parties: counterparties)
     }
 }
 
@@ -255,7 +234,6 @@ final class tss_client_swiftTests: XCTestCase {
  import { getEcCrypto } from "./utils";
  import { createSockets, distributeShares, getSignatures } from "./localUtils";
 
-
  const DELIMITERS = {
      Delimiter1: "\u001c",
      Delimiter2: "\u0015",
@@ -267,7 +245,6 @@ final class tss_client_swiftTests: XCTestCase {
  const msgHash = keccak256(msg);
  const clientIndex = servers - 1;
  const ec = getEcCrypto();
-
 
  const tssImportUrl = `${window.location.origin}/dkls_19.wasm`;
 
@@ -291,7 +268,7 @@ final class tss_client_swiftTests: XCTestCase {
    const session = `${testingRouteIdentifier}${vid}${DELIMITERS.Delimiter2}default${DELIMITERS.Delimiter3}0${
      DELIMITERS.Delimiter4
      }${randomNonce.toString("hex")}${testingRouteIdentifier}`;
-   
+
    // generate mock signatures.
    const signatures = getSignatures();
 
@@ -356,6 +333,5 @@ final class tss_client_swiftTests: XCTestCase {
  };
 
  runLocalServerTest();
- 
- 
+
  */

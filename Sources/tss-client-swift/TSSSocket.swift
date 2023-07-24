@@ -6,13 +6,17 @@ internal final class TSSSocket {
     private(set) var session: String
     private(set) var party: Int32
     private(set) var socketManager: SocketManager? = nil
+    private(set) var queues: [DispatchQueue?] = []
     
     init(session: String, party: Int32, url: URL?) {
         self.party = party
         self.session = session.components(separatedBy: Delimiters.Delimiter4)[1]
+        let queue = DispatchQueue(label: "socket.queue.party"+String(party))
+        self.queues.append(queue)
         socketManager = SocketManager(socketURL: url!,
                                       config: [
                                         .log(true),
+                                        .handleQueue(queue),
                                         .compress,
                                         .forceWebsockets(true),
                                         .reconnectAttempts(0),
