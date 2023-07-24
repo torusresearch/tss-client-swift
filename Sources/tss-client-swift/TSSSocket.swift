@@ -10,7 +10,7 @@ internal final class TSSSocket {
     
     init(session: String, party: Int32, url: URL?) {
         self.party = party
-        self.session = session.components(separatedBy: Delimiters.Delimiter4)[1]
+        self.session = session
         let queue = DispatchQueue(label: "socket.queue.party"+String(party))
         self.queues.append(queue)
         socketManager = SocketManager(socketURL: url!,
@@ -22,7 +22,7 @@ internal final class TSSSocket {
                                         .reconnectAttempts(0),
                                         .reconnectWaitMax(10000),
                                         //.path("/tss/socket.io/"),
-                                        .connectParams(["sessionId" : self.session])
+                                        .connectParams(["sessionId" : self.session.components(separatedBy: Delimiters.Delimiter4)[1]])
                                       ])
         
         let socket = socketManager!.defaultSocket

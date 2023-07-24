@@ -1,5 +1,4 @@
 import BigInt
-@testable import SocketIO
 import SwiftKeccak
 @testable import tss_client_swift
 import XCTest
@@ -199,6 +198,7 @@ final class tss_client_swiftTests: XCTestCase {
         var client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
         var connections = 0
         print(partyIndexes)
+        /*
         var connectedParties: [Int32] = []
         while connections < (parties-1) {
             for party in partyIndexes {
@@ -218,6 +218,8 @@ final class tss_client_swiftTests: XCTestCase {
             }
         }
         print("active connections: " + String(connections))
+         */
+
         let counterparties = try! Counterparties(parties: "1,2")
         var precompute = try! client.precompute(parties: counterparties)
     }
