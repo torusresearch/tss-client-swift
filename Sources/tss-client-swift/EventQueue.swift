@@ -37,7 +37,7 @@ internal final class EventQueue {
     }
     
     public func clearEvents(session: String?) {
-            queue.sync(flags: .barrier) {
+        queue.sync(flags: .barrier) {
                 events.removeAll(where: { $0.session == session})
         }
     }

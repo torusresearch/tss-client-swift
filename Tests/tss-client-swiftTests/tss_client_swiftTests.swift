@@ -44,7 +44,7 @@ final class tss_client_swiftTests: XCTestCase {
                 "data": token,
                 "sig": sig,
             ]
-            let jsonData = String(decoding: try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted), as: UTF8.self)
+            let jsonData = String(decoding: try JSONSerialization.data(withJSONObject: msg), as: UTF8.self)
             sigs.append(jsonData)
         }
 
@@ -134,7 +134,7 @@ final class tss_client_swiftTests: XCTestCase {
                     "session": session,
                     "share": TSSHelpers.base64ToBase64url(base64: try TSSHelpers.base64Share(share: share)),
                 ]
-                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
+                let jsonData = try JSONSerialization.data(withJSONObject: msg)
 
                 request.httpBody = jsonData
 
@@ -235,8 +235,7 @@ final class tss_client_swiftTests: XCTestCase {
         print(partyIndexes)
         print("connected parties")
         print(connectedParties)
-        let counterparties = try! Counterparties(parties: "1,2")
-        var precompute = try! client.precompute(parties: counterparties, serverCoeffs: coeffs, signatures: sigs)
+        var precompute = try! client.precompute(serverCoeffs: coeffs, signatures: sigs)
     }
 }
 

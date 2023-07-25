@@ -68,7 +68,7 @@ public class TSSClient {
             }
         }
 
-        let readMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?) -> UnsafePointer<CChar>?)? = { sessionCString, index, remote, msgTypeCString in
+        let readMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?) -> UnsafePointer<CChar>?)? = { sessionCString, index, party, msgTypeCString in
             let session = String(cString: sessionCString!)
             let msgType = String(cString: msgTypeCString!)
             var cast = UnsafeMutablePointer(mutating: sessionCString)
@@ -80,13 +80,12 @@ public class TSSClient {
                 let result = "not supported"
                 return (result as NSString).utf8String!
             }
-
             var message: Message?
             var found = false
             var count = 0
             // let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { (timer) in
             while !found {
-                if let msg = MessageQueue.shared.findMessage(session: session, sender: remote, recipient: index, messageType: msgType) {
+                if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
                     message = msg
                     found = true
                     // timer.invalidate()
@@ -94,11 +93,11 @@ public class TSSClient {
                 if count % 5000 == 0 {
                     // timer.invalidate()
                     let messages = MessageQueue.shared.allMessages(session: session)
-                    print("waiting for message: " + msgType + " from " + String(remote) + " for " + String(index))
+                    print("waiting for message: " + msgType + " from " + String(party) + " for " + String(index))
                 }
                 count += 1
             }
-            MessageQueue.shared.removeMessage(session: session, sender: remote, recipient: index, messageType: msgType)
+            MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
             // }
             let result = message!.msgData
             return (result as NSString).utf8String
@@ -115,7 +114,6 @@ public class TSSClient {
             Utilities.CStringFree(ptr: cast)
             cast = UnsafeMutablePointer(mutating: msgDataCString)
             Utilities.CStringFree(ptr: cast)
-
             do {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
                 let msg = TssSendMsg(session: session, index: String(index), recipient: String(recipient), msg_type: msgType, msg_data: msgData)
@@ -143,7 +141,7 @@ public class TSSClient {
     }
 
     // calculates a precompute, each party calculates their own precompute
-    public func precompute(parties: Counterparties, serverCoeffs: [String: String], signatures: [String]) throws -> Precompute {
+    public func precompute(serverCoeffs: [String: String], signatures: [String]) throws -> Precompute {
         EventQueue.shared.updateFocus(time: Date())
         for i in 0 ..< self.parties {
             if i != index {
@@ -162,6 +160,7 @@ public class TSSClient {
             let party = Int32(i)
             if party != index {
                 let (tssUrl, tssSocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(party))
+                let socketID = tssSocket!.socketManager!.defaultSocket.sid!
                 let urlSession = URLSession.shared
                 let url = URL(string: tssUrl!.url!.absoluteString + "/precompute")!
                 var request = URLRequest(url: url)
@@ -174,7 +173,7 @@ public class TSSClient {
 
                 let endpoints: [TSSEndpoint] = try TSSConnectionInfo.shared.allEndpoints(session: session)
                 var endpointStrings: [String] = endpoints.map({ $0.url!.absoluteString })
-                endpointStrings.insert("websocket:" + tssSocket!.socketManager!.defaultSocket.sid!, at: Int(index))
+                endpointStrings.insert("websocket:" + socketID, at: Int(index))
 
                 let msg: [String: Any] = [
                     "endpoints": endpointStrings,
@@ -183,13 +182,13 @@ public class TSSClient {
                     "player_index": party,
                     "threshold": self.parties,
                     "pubkey": pubKey,
-                    "notifyWebsocketId": tssSocket!.socketManager!.defaultSocket.sid!,
-                    "sendWebsocket": tssSocket!.socketManager!.defaultSocket.sid!,
+                    "notifyWebsocketId": socketID,
+                    "sendWebsocket": socketID,
                     "server_coeffs": serverCoeffs,
                     "signatures": signatures,
                 ]
 
-                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
+                let jsonData = try JSONSerialization.data(withJSONObject: msg)
 
                 request.httpBody = jsonData
 
@@ -213,7 +212,9 @@ public class TSSClient {
             throw TSSClientError.errorWithMessage("Failed to setup client")
         }
         do {
-            let result = try signer.precompute(parties: parties, rng: rng, comm: comm)
+            let partyArray = Array(1...parties).map({ String($0)}).joined(separator: ",")
+            let counterparties = try Counterparties(parties: partyArray)
+            let result = try signer.precompute(parties: counterparties, rng: rng, comm: comm)
             consumed = false
             EventQueue.shared.addEvent(event: Event(message: "precompute_complete", session: session, occurred: Date(), type: EventType.PrecomputeComplete))
             return result
@@ -268,7 +269,7 @@ public class TSSClient {
                 "original_message": original_message,
                 "hash_algo": "keccak256",
             ]
-            let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
+            let jsonData = try JSONSerialization.data(withJSONObject: msg)
 
             request.httpBody = jsonData
 
@@ -350,7 +351,7 @@ public class TSSClient {
                 let msg: [String: Any] = [
                     "session": session,
                 ]
-                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: .prettyPrinted)
+                let jsonData = try JSONSerialization.data(withJSONObject: msg)
 
                 request.httpBody = jsonData
 
