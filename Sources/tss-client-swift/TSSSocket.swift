@@ -43,7 +43,7 @@ internal final class TSSSocket {
             
             let session = data[0] as! String
             let party = data[1] as! String
-            EventQueue.shared.addEvent(event: Event(message: party, session: session, occurred: Date(), type: EventType.PrecomputeComplete))
+            EventQueue.shared.addEvent(event: Event(message: party, session: session, party: Int32(party)!, occurred: Date(), type: EventType.PrecomputeComplete))
             if ack.expected {
                 socket.emitAck(1, with: [])
             }
@@ -56,7 +56,7 @@ internal final class TSSSocket {
             
             let session = data[0] as! String
             let party = data[1] as! String
-            EventQueue.shared.addEvent(event: Event(message: party, session: session, occurred: Date(), type: EventType.PrecomputeComplete))
+            EventQueue.shared.addEvent(event: Event(message: party, session: session, party: Int32(party)!, occurred: Date(), type: EventType.PrecomputeComplete))
             if ack.expected {
                 socket.emitAck(1, with: [])
             }

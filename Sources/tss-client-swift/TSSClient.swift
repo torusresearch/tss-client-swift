@@ -216,10 +216,10 @@ public class TSSClient {
             let counterparties = try Counterparties(parties: partyArray)
             let result = try signer.precompute(parties: counterparties, rng: rng, comm: comm)
             consumed = false
-            EventQueue.shared.addEvent(event: Event(message: "precompute_complete", session: session, occurred: Date(), type: EventType.PrecomputeComplete))
+            EventQueue.shared.addEvent(event: Event(message: "precompute_complete", session: session, party: index, occurred: Date(), type: EventType.PrecomputeComplete))
             return result
         } catch let error {
-            EventQueue.shared.addEvent(event: Event(message: "precompute_failed", session: self.session, occurred: Date(), type: EventType.PrecomputeError))
+            EventQueue.shared.addEvent(event: Event(message: "precompute_failed", session: self.session, party: index, occurred: Date(), type: EventType.PrecomputeError))
             throw error
         }
     }
