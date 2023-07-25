@@ -217,7 +217,7 @@ final class tss_client_swiftTests: XCTestCase {
             for party in partyIndexes {
                 if party != clientIndex {
                     if !connectedParties.contains(party) {
-                        let (_, socketConnection) = try! TSSConnectionInfo.shared.lookupEndpoint(session: self.session, party: party+1)
+                        let (_, socketConnection) = try! TSSConnectionInfo.shared.lookupEndpoint(session: self.session, party: party)
                         if socketConnection == nil || socketConnection!.socketManager == nil {
                             continue
                         }

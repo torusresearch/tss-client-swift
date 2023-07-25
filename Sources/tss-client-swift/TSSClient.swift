@@ -63,7 +63,7 @@ public class TSSClient {
         
         for (index,item) in endpoints.enumerated() {
             if index != self.index {
-                TSSConnectionInfo.shared.addInfo(session: session, party: Int32(index+1), endpoint: item, socketUrl: tssSocketEndpoints[index])
+                TSSConnectionInfo.shared.addInfo(session: session, party: Int32(index), endpoint: item, socketUrl: tssSocketEndpoints[index])
             }
         }
         
@@ -90,7 +90,7 @@ public class TSSClient {
                             found = true
                             //timer.invalidate()
                     }
-                    if count % 50 == 0 {
+                    if count % 500 == 0 {
                         //timer.invalidate()
                         print("waiting for message: " + msgType + " from " + String(remote) + " for " + String(index))
                     }
@@ -114,7 +114,7 @@ public class TSSClient {
             Utilities.CStringFree(ptr: cast)
             
             do {
-                let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient+1))
+                let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
                 let msg = TssSendMsg(session: session, index: String(index), recipient: String(recipient), msg_type: msgType, msg_data: msgData)
                 if let tsssocket = tsssocket
                 {
@@ -147,7 +147,7 @@ public class TSSClient {
         {
             if i != self.index
             {
-                let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i+1))
+                let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
                 if tsssocket!.socketManager !== nil
                 {
                     if //tsssocket!.socketManager!.defaultSocket.status != SocketIOStatus.connected &&
@@ -160,7 +160,7 @@ public class TSSClient {
         }
         
         for i in 0..<self.parties {
-            let party = Int32(i+1)
+            let party = Int32(i)
             if i != index {
                 let (tssUrl, tssSocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(party))
                 let urlSession = URLSession.shared
