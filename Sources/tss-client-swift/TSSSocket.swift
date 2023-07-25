@@ -37,6 +37,7 @@ internal final class TSSSocket {
         })
         socket.on("precompute_complete", callback: { data ,_ in
             if session != self.session {
+                print("ignoring message for a different session...")
                 return
             }
             
@@ -46,6 +47,7 @@ internal final class TSSSocket {
         })
         socket.on("precompute_failed", callback: { data ,_ in
             if session != self.session {
+                print("ignoring message for a different session...")
                 return
             }
             
@@ -55,6 +57,7 @@ internal final class TSSSocket {
         })
         socket.on("send", callback: {data ,_ in
             if session != self.session {
+                print("ignoring message for a different session...")
                 return
             }
             
