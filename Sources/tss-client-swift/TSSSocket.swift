@@ -41,9 +41,9 @@ internal final class TSSSocket {
                 return
             }
             
-            let session = data[0] as! String
-            let party = data[1] as! String
-            EventQueue.shared.addEvent(event: Event(message: party, session: session, party: Int32(party)!, occurred: Date(), type: EventType.PrecomputeComplete))
+            let json = try! JSONSerialization.data(withJSONObject:data[0])
+            let msg = try! JSONDecoder().decode(TssPrecomputeUpdate.self, from: json)
+            EventQueue.shared.addEvent(event: Event(message: String(msg.party), session: msg.session, party: Int32(msg.party), occurred: Date(), type: EventType.PrecomputeComplete))
             if ack.expected {
                 ack.with(1)
             }
@@ -54,9 +54,9 @@ internal final class TSSSocket {
                 return
             }
             
-            let session = data[0] as! String
-            let party = data[1] as! String
-            EventQueue.shared.addEvent(event: Event(message: party, session: session, party: Int32(party)!, occurred: Date(), type: EventType.PrecomputeComplete))
+            let json = try! JSONSerialization.data(withJSONObject:data[0])
+            let msg = try! JSONDecoder().decode(TssPrecomputeUpdate.self, from: json)
+            EventQueue.shared.addEvent(event: Event(message: String(msg.party), session: msg.session, party: Int32(msg.party), occurred: Date(), type: EventType.PrecomputeComplete))
             if ack.expected {
                 ack.with(1)
             }

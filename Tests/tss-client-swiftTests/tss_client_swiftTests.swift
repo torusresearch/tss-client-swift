@@ -210,7 +210,7 @@ final class tss_client_swiftTests: XCTestCase {
             coeffs.updateValue(coeff, forKey: String(i))
         }
         
-        var client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
+        let client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
         var connections = 0
         var connectedParties: [Int32] = []
         while connections < (parties-1) {
@@ -235,7 +235,7 @@ final class tss_client_swiftTests: XCTestCase {
         print(partyIndexes)
         print("connected parties")
         print(connectedParties)
-        var precompute = try! client.precompute(serverCoeffs: coeffs, signatures: sigs)
+        let precompute = try! client.precompute(serverCoeffs: coeffs, signatures: sigs)
     }
 }
 
