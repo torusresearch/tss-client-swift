@@ -45,7 +45,7 @@ internal final class TSSSocket {
             let party = data[1] as! String
             EventQueue.shared.addEvent(event: Event(message: party, session: session, party: Int32(party)!, occurred: Date(), type: EventType.PrecomputeComplete))
             if ack.expected {
-                socket.emitAck(1, with: [])
+                ack.with(1)
             }
         })
         socket.on("precompute_failed", callback: { data , ack in
@@ -58,7 +58,7 @@ internal final class TSSSocket {
             let party = data[1] as! String
             EventQueue.shared.addEvent(event: Event(message: party, session: session, party: Int32(party)!, occurred: Date(), type: EventType.PrecomputeComplete))
             if ack.expected {
-                socket.emitAck(1, with: [])
+                ack.with(1)
             }
         })
         socket.on("send", callback: {data , ack in
@@ -71,7 +71,7 @@ internal final class TSSSocket {
             let msg = try! JSONDecoder().decode(TssRecvMsg.self, from: json)
             MessageQueue.shared.addMessage(msg: Message(session: msg.session, sender:  UInt64(exactly: msg.sender)!, recipient: UInt64(exactly: msg.recipient)!, msgType: msg.msg_type, msgData: msg.msg_data))
             if ack.expected {
-                socket.emitAck(1, with: [])
+                ack.with(1)
             }
         })
         socket.connect()
