@@ -91,14 +91,16 @@ public class TSSClient {
                     found = true
                     // timer.invalidate()
                 }
-                if count % 500 == 0 {
+                if count % 5000 == 0 {
                     // timer.invalidate()
+                    let messages = MessageQueue.shared.allMessages(session: session)
                     print("waiting for message: " + msgType + " from " + String(remote) + " for " + String(index))
                 }
                 count += 1
             }
+            MessageQueue.shared.removeMessage(session: session, sender: remote, recipient: index, messageType: msgType)
             // }
-            let result = message?.msgData ?? ""
+            let result = message!.msgData
             return (result as NSString).utf8String
         }
 
