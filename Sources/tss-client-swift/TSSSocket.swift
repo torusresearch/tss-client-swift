@@ -35,7 +35,7 @@ internal final class TSSSocket {
         socket.on(clientEvent: .disconnect, callback: {_,_ in
             print("disconnected, party:" + String(party))
         })
-        socket.on("precompute_complete", callback: { data ,_ in
+        socket.on("precompute_complete", callback: { data , ack in
             if session != self.session {
                 print("ignoring message for a different session...")
                 return
@@ -44,8 +44,11 @@ internal final class TSSSocket {
             let session = data[0] as! String
             let party = data[1] as! String
             EventQueue.shared.addEvent(event: Event(message: party, session: session, occurred: Date(), type: EventType.PrecomputeComplete))
+            if ack.expected {
+                socket.emitAck(1, with: [])
+            }
         })
-        socket.on("precompute_failed", callback: { data ,_ in
+        socket.on("precompute_failed", callback: { data , ack in
             if session != self.session {
                 print("ignoring message for a different session...")
                 return
@@ -54,8 +57,11 @@ internal final class TSSSocket {
             let session = data[0] as! String
             let party = data[1] as! String
             EventQueue.shared.addEvent(event: Event(message: party, session: session, occurred: Date(), type: EventType.PrecomputeComplete))
+            if ack.expected {
+                socket.emitAck(1, with: [])
+            }
         })
-        socket.on("send", callback: {data ,_ in
+        socket.on("send", callback: {data , ack in
             if session != self.session {
                 print("ignoring message for a different session...")
                 return
@@ -64,6 +70,9 @@ internal final class TSSSocket {
             let json = try! JSONSerialization.data(withJSONObject:data[0])
             let msg = try! JSONDecoder().decode(TssRecvMsg.self, from: json)
             MessageQueue.shared.addMessage(msg: Message(session: msg.session, sender:  UInt64(exactly: msg.sender)!, recipient: UInt64(exactly: msg.recipient)!, msgType: msg.msg_type, msgData: msg.msg_data))
+            if ack.expected {
+                socket.emitAck(1, with: [])
+            }
         })
         socket.connect()
     }
