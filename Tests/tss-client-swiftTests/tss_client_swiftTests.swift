@@ -203,11 +203,11 @@ final class tss_client_swiftTests: XCTestCase {
         let (endpoints, socketEndpoints, partyIndexes) = generateEndpoints(parties: parties, clientIndex: clientIndex)
         let (privateKey, publicKey) = try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
 
-        var coeffs: [String] = []
+        var coeffs: [String: String] = [:]
         let participatingServerDKGIndexes: [Int] = [1,2,3]
-        for _ in 0...participatingServerDKGIndexes.count {
-            let index = BigInt(1).serialize().suffix(32).hexString
-            coeffs.append(index)
+        for i in 0...participatingServerDKGIndexes.count {
+            let coeff = BigInt(1).serialize().suffix(32).hexString
+            coeffs.updateValue(coeff, forKey: String(i))
         }
         
         var client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))

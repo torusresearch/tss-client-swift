@@ -141,7 +141,7 @@ public class TSSClient {
     }
     
     // calculates a precompute, each party calculates their own precompute
-    public func precompute(parties: Counterparties, serverCoeffs: [String], signatures: [String]) throws -> Precompute {
+    public func precompute(parties: Counterparties, serverCoeffs: [String : String], signatures: [String]) throws -> Precompute {
         EventQueue.shared.updateFocus(time: Date())
         for i in 0..<self.parties
         {
