@@ -90,8 +90,9 @@ public class TSSClient {
                             found = true
                             //timer.invalidate()
                     }
-                    if count == 5 {
+                    if count % 50 == 0 {
                         //timer.invalidate()
+                        print("waiting for message: " + msgType + " from " + String(remote) + " for " + String(index))
                     }
                     count += 1
                 }
@@ -142,29 +143,25 @@ public class TSSClient {
     // calculates a precompute, each party calculates their own precompute
     public func precompute(parties: Counterparties, serverCoeffs: [String], signatures: [String]) throws -> Precompute {
         EventQueue.shared.updateFocus(time: Date())
-        let parties_str = try parties.export()
-        let parties_array = parties_str.components(separatedBy: ",")
-        let party_indexes = parties_array.map { Int32($0)!}
-        
-        var sockets: [TSSSocket] = []
-        print(party_indexes)
-        for i in party_indexes
+        for i in 0..<self.parties
         {
-            let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: i)
-            if tsssocket!.socketManager !== nil
+            if i != self.index
             {
-                if //tsssocket!.socketManager!.defaultSocket.status != SocketIOStatus.connected &&
-                    tsssocket!.socketManager!.defaultSocket.sid != nil {
-                    sockets.append(tsssocket!)
-                } else {
-                    throw TSSClientError.errorWithMessage("socket not connected yet, party:" + String(i)+", session:" + session)
+                let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i+1))
+                if tsssocket!.socketManager !== nil
+                {
+                    if //tsssocket!.socketManager!.defaultSocket.status != SocketIOStatus.connected &&
+                        tsssocket!.socketManager!.defaultSocket.sid != nil {
+                    } else {
+                        throw TSSClientError.errorWithMessage("socket not connected yet, party:" + String(i)+", session:" + session)
+                    }
                 }
             }
-                
         }
         
-        for party in 1..<self.parties {
-            if party != index {
+        for i in 0..<self.parties {
+            let party = Int32(i+1)
+            if i != index {
                 let (tssUrl, tssSocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(party))
                 let urlSession = URLSession.shared
                 let url = URL(string: tssUrl!.url!.absoluteString + "/precompute")!
@@ -174,26 +171,21 @@ public class TSSClient {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue("[WEB3_SESSION_HEADER_KEY]", forHTTPHeaderField: TSSClient.sid(session: session))
+                request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
                 
-                var endpoints: [String] = []
-                for (j, item) in sockets.enumerated()
-                {
-                    if j != self.index {
-                        endpoints.append("websocket:"+(item.socketManager?.defaultSocket.sid ?? ""))
-                    }
-                }
-                
+                let endpoints: [TSSEndpoint] = try TSSConnectionInfo.shared.allEndpoints(session: session)
+                var endpointStrings: [String] = endpoints.map({$0.url!.absoluteString})
+                endpointStrings.insert("websocket:"+tssSocket!.socketManager!.defaultSocket.sid!, at: Int(self.index))
                 
                 let msg: [String: Any]  = [
-                    "endpoints": endpoints,
+                    "endpoints": endpointStrings,
                     "session": session,
                     "parties": Array(0..<self.parties),
                     "player_index": party,
                     "threshold": self.parties,
                     "pubkey": self.pubKey,
-                    "notifyWebsocketId": tssSocket!.socketManager!.defaultSocket.sid ?? "",
-                    "sendWebsocket": tssSocket!.socketManager!.defaultSocket.sid ?? "",
+                    "notifyWebsocketId": tssSocket!.socketManager!.defaultSocket.sid!,
+                    "sendWebsocket": tssSocket!.socketManager!.defaultSocket.sid!,
                     "server_coeffs": serverCoeffs,
                     "signatures": signatures
                 ]
@@ -204,8 +196,15 @@ public class TSSClient {
                 
                 let sem = DispatchSemaphore.init(value: 0)
                 // data, response, error
-                urlSession.dataTask(with: request) { data, _, error in
+                urlSession.dataTask(with: request) { data, resp, error in
+                    defer {
                         sem.signal()
+                    }
+                        if let httpResponse = resp as? HTTPURLResponse {
+                            if httpResponse.statusCode != 200 {
+                                print(print("Failed precompute route for" + url.absoluteString))
+                            }
+                        }
                 }.resume()
                 sem.wait()
             }
@@ -261,7 +260,7 @@ public class TSSClient {
             request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
             request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
             request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.addValue("[WEB3_SESSION_HEADER_KEY]", forHTTPHeaderField: TSSClient.sid(session: session))
+            request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
             let msg: [String: Any]  = [
                 "session": session,
                 "sender": index,
@@ -277,7 +276,7 @@ public class TSSClient {
             
             let sem = DispatchSemaphore.init(value: 0)
             // data, response, error
-            urlSession.dataTask(with: request) { data, _, error in
+            urlSession.dataTask(with: request) { data, resp, error in
                 defer {
                     sem.signal()
                 }
@@ -285,6 +284,11 @@ public class TSSClient {
                     let resultString: String = String(decoding: data, as: UTF8.self)
                     fragments.append(resultString)
                     
+                }
+                if let httpResponse = resp as? HTTPURLResponse {
+                    if httpResponse.statusCode != 200 {
+                        print("Failed send route for" + url.absoluteString)
+                    }
                 }
             }.resume()
             sem.wait()
@@ -346,7 +350,7 @@ public class TSSClient {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue("[WEB3_SESSION_HEADER_KEY]", forHTTPHeaderField: TSSClient.sid(session: session))
+                request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
                 let msg: [String: Any]  = [
                     "session": session,
                 ]
@@ -356,8 +360,15 @@ public class TSSClient {
                 
                 let sem = DispatchSemaphore.init(value: 0)
                 // data, response, error
-                urlSession.dataTask(with: request) { _, _, error in
+                urlSession.dataTask(with: request) { _, resp, error in
+                    defer {
                         sem.signal()
+                    }
+                    if let httpResponse = resp as? HTTPURLResponse {
+                        if httpResponse.statusCode != 200 {
+                            print("Failed to cleanup for " + url.absoluteString)
+                        }
+                    }
                 }.resume()
                 sem.wait()
             }

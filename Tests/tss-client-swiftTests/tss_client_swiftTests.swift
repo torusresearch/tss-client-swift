@@ -129,6 +129,7 @@ final class tss_client_swiftTests: XCTestCase {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
                 let msg: [String: Any] = [
                     "session": session,
                     "share": TSSHelpers.base64ToBase64url(base64: try TSSHelpers.base64Share(share: share)),
@@ -139,8 +140,15 @@ final class tss_client_swiftTests: XCTestCase {
 
                 let sem = DispatchSemaphore(value: 0)
                 // data, response, error
-                urlSession.dataTask(with: request) { _, _, _ in
-                    sem.signal()
+                urlSession.dataTask(with: request) { _, resp, _ in
+                    defer {
+                        sem.signal()
+                    }
+                    if let httpResponse = resp as? HTTPURLResponse {
+                        if httpResponse.statusCode != 200 {
+                            print("Failed share route for" + url.absoluteString)
+                        }
+                    }
                 }.resume()
                 sem.wait()
             }
@@ -191,13 +199,13 @@ final class tss_client_swiftTests: XCTestCase {
             vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce
          + testingRouteIdentifier
         let sigs = try getSignatures()
-
+        print(sigs)
         let (endpoints, socketEndpoints, partyIndexes) = generateEndpoints(parties: parties, clientIndex: clientIndex)
         let (privateKey, publicKey) = try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
 
         var coeffs: [String] = []
         let participatingServerDKGIndexes: [Int] = [1,2,3]
-        for _ in participatingServerDKGIndexes {
+        for _ in 0...participatingServerDKGIndexes.count {
             let index = BigInt(1).serialize().suffix(32).hexString
             coeffs.append(index)
         }

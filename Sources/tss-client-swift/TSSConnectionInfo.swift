@@ -19,7 +19,7 @@ internal final class TSSConnectionInfo {
     }
     
     public func lookupEndpoint(session: String, party: Int32) throws -> (TSSEndpoint?, TSSSocket?) {
-        queue.sync(flags: .barrier) {
+        queue.sync {
             var mgr: TSSSocket? = nil
             if let mgrIndex = socketManagers.firstIndex(where: { $0.session == session && $0.party == party }) {
                 mgr =  socketManagers[mgrIndex]
@@ -29,6 +29,12 @@ internal final class TSSConnectionInfo {
                 endpoint = endpoints[endpointIndex]
             }
             return (endpoint, mgr)
+        }
+    }
+    
+    public func allEndpoints(session: String) throws -> [TSSEndpoint] {
+        queue.sync {
+             return endpoints.filter({ $0.session == session})
         }
     }
     
