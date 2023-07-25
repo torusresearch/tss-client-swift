@@ -119,7 +119,7 @@ public class TSSClient {
                 let msg = TssSendMsg(session: session, index: String(index), recipient: String(recipient), msg_type: msgType, msg_data: msgData)
                 if let tsssocket = tsssocket {
                     if tsssocket.socketManager != nil {
-                        tsssocket.socketManager!.defaultSocket.emit("send_msg", msg, completion: {})
+                        tsssocket.socketManager!.defaultSocket.emit("send_msg", msg)
                         return true
                     }
                 }
