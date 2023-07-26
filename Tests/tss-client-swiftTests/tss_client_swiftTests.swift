@@ -90,15 +90,12 @@ final class tss_client_swiftTests: XCTestCase {
         for _ in 0 ..< (parties.count - 1) {
             let shareBigUint = BigUInt(SECP256K1.generatePrivateKey()!)
             let shareBigInt = BigInt(sign: .plus, magnitude: shareBigUint)
-            print("share:" + shareBigInt.serialize().toHexString())
             additiveShares.append(shareBigInt)
             shareSum += shareBigInt
         }
 
         let finalShare = (privKey - shareSum.modulus(modulusValueSigned)).modulus(modulusValueSigned)
         additiveShares.append(finalShare)
-
-        print(additiveShares)
 
         let reduced = additiveShares.reduce(0) {
             ($0 + $1).modulus(modulusValueSigned)
@@ -135,8 +132,8 @@ final class tss_client_swiftTests: XCTestCase {
                     "share": TSSHelpers.base64ToBase64url(base64: try TSSHelpers.base64Share(share: share)),
                 ]
                 let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys, .withoutEscapingSlashes])
-                let jsonString = NSString(data: jsonData, encoding: String.Encoding.utf8.rawValue)!
-                print(jsonString)
+                // let jsonString = NSString(data: jsonData, encoding: String.Encoding.utf8.rawValue)!
+                // print(jsonString)
                 
                 request.httpBody = jsonData
 
@@ -201,7 +198,6 @@ final class tss_client_swiftTests: XCTestCase {
             vid + Delimiters.Delimiter2 + "default" + Delimiters.Delimiter3 + "0" + Delimiters.Delimiter4 + randomNonce
          + testingRouteIdentifier
         let sigs = try getSignatures()
-        print(sigs)
         let (endpoints, socketEndpoints, partyIndexes) = generateEndpoints(parties: parties, clientIndex: clientIndex)
         let (privateKey, publicKey) = try setupMockShares(endpoints: endpoints, parties: partyIndexes, localClientIndex: clientIndex, session: session)
 

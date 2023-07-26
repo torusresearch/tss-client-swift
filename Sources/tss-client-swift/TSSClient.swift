@@ -63,7 +63,6 @@ public class TSSClient {
         self.pubKey = pubKey
 
         for (index, item) in endpoints.enumerated() {
-            print(index)
             if index != self.index {
                 TSSConnectionInfo.shared.addInfo(session: session, party: Int32(index), endpoint: item, socketUrl: tssSocketEndpoints[index])
             }
@@ -192,8 +191,8 @@ public class TSSClient {
                 ]
 
                 let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys,.withoutEscapingSlashes])
-                let jsonString = NSString(data: jsonData, encoding: String.Encoding.utf8.rawValue)!
-                print(jsonString)
+                // let jsonString = NSString(data: jsonData, encoding: String.Encoding.utf8.rawValue)!
+                // print(jsonString)
                 request.httpBody = jsonData
 
                 let sem = DispatchSemaphore(value: 0)
@@ -204,7 +203,7 @@ public class TSSClient {
                     }
                     if let httpResponse = resp as? HTTPURLResponse {
                         if httpResponse.statusCode != 200 {
-                            print(print("Failed precompute route for" + url.absoluteString))
+                            print("Failed precompute route for" + url.absoluteString)
                         }
                     }
                 }.resume()
@@ -407,7 +406,6 @@ public class TSSClient {
                     if socketConnection!.socketManager!.status == .connected &&
                         socketConnection!.socketManager!.defaultSocket.status == .connected && socketConnection!.socketManager!.defaultSocket.sid != nil {
                         connections += 1
-                        print("party " + String(party) + " connected, socket id: " + (socketConnection!.socketManager!.defaultSocket.sid!))
                         connectedParties.append(party)
                     }
                 }
