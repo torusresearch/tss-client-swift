@@ -2,7 +2,7 @@ import Foundation
 import BigInt
 import SwiftKeccak
 
-class TSSHelpers {
+public class TSSHelpers {
     private init() {}
     
     public static func hashMessage(message: String) -> String {

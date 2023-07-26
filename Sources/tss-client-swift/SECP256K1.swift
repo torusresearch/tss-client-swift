@@ -4,7 +4,7 @@ import CryptoSwift
     import secp256k1
 #endif
 
-struct SECP256K1 {
+public struct SECP256K1 {
     public struct UnmarshaledSignature {
         public var v: UInt8 = 0
         public var r = Data(repeating: 0, count: 32)

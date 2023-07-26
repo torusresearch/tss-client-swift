@@ -5,8 +5,8 @@ import SocketIO
 import SwiftKeccak
 
 let CURVE_N: String = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
-var modulusValueUnsigned = BigUInt(CURVE_N, radix: 16)!
-var modulusValueSigned = BigInt(CURVE_N, radix: 16)!
+public var modulusValueUnsigned = BigUInt(CURVE_N, radix: 16)!
+public var modulusValueSigned = BigInt(CURVE_N, radix: 16)!
 
 struct Msg {
     let session: String
@@ -25,7 +25,7 @@ struct Delimiters {
     static let Delimiter4 = "\u{0017}"
 }
 
-enum TSSClientError: Error {
+public enum TSSClientError: Error {
     case errorWithMessage(String)
 
     var localizedDescription: String {
@@ -143,7 +143,7 @@ public class TSSClient {
     // calculates a precompute, each party calculates their own precompute
     public func precompute(serverCoeffs: [String: String], signatures: [String]) throws -> Precompute {
         EventQueue.shared.updateFocus(time: Date())
-        for i in 0 ..< self.parties {
+        for i in 0 ..< parties {
             if i != index {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
                 if tsssocket!.socketManager !== nil {
@@ -156,7 +156,7 @@ public class TSSClient {
             }
         }
 
-        for i in 0 ..< self.parties {
+        for i in 0 ..< parties {
             let party = Int32(i)
             if party != index {
                 let (tssUrl, tssSocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(party))
@@ -178,9 +178,9 @@ public class TSSClient {
                 let msg: [String: Any] = [
                     "endpoints": endpointStrings,
                     "session": session,
-                    "parties": Array(0 ..< self.parties),
+                    "parties": Array(0 ..< parties),
                     "player_index": party,
-                    "threshold": self.parties,
+                    "threshold": parties,
                     "pubkey": pubKey,
                     "notifyWebsocketId": socketID,
                     "sendWebsocket": socketID,
@@ -189,7 +189,8 @@ public class TSSClient {
                 ]
 
                 let jsonData = try JSONSerialization.data(withJSONObject: msg)
-
+                let jsonString = NSString(data: jsonData, encoding: String.Encoding.utf8.rawValue)!
+                print(jsonString)
                 request.httpBody = jsonData
 
                 let sem = DispatchSemaphore(value: 0)
@@ -212,7 +213,7 @@ public class TSSClient {
             throw TSSClientError.errorWithMessage("Failed to setup client")
         }
         do {
-            let partyArray = Array(1...parties).map({ String($0)}).joined(separator: ",")
+            let partyArray = Array(1 ... parties).map({ String($0) }).joined(separator: ",")
             let counterparties = try Counterparties(parties: partyArray)
             let result = try signer.precompute(parties: counterparties, rng: rng, comm: comm)
             consumed = false
@@ -385,5 +386,32 @@ public class TSSClient {
             return true
         }
         return false
+    }
+
+    public func checkConnected() -> Bool {
+        var connections = 0
+        var connectedParties: [Int32] = []
+        for party_index in 0 ..< parties {
+            let party = Int32(party_index)
+            if party != index {
+                if !connectedParties.contains(party) {
+                    let (_, socketConnection) = try! TSSConnectionInfo.shared.lookupEndpoint(session: session, party: party)
+                    if socketConnection == nil || socketConnection!.socketManager == nil {
+                        continue
+                    }
+                    if socketConnection!.socketManager!.defaultSocket.status == .connected && socketConnection!.socketManager!.defaultSocket.sid != nil {
+                        connections += 1
+                        print("party " + String(party) + " connected, socket id: " + (socketConnection!.socketManager!.defaultSocket.sid!))
+                        connectedParties.append(party)
+                    }
+                }
+            }
+        }
+
+        if connections != (parties - 1) {
+            return false
+        }
+        
+        return true
     }
 }

@@ -1,6 +1,6 @@
 import BigInt
 import SwiftKeccak
-@testable import tss_client_swift
+import tss_client_swift
 import XCTest
 
 final class tss_client_swiftTests: XCTestCase {
@@ -211,30 +211,10 @@ final class tss_client_swiftTests: XCTestCase {
         }
         
         let client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
-        var connections = 0
-        var connectedParties: [Int32] = []
-        while connections < (parties-1) {
-            for party in partyIndexes {
-                if party != clientIndex {
-                    if !connectedParties.contains(party) {
-                        let (_, socketConnection) = try! TSSConnectionInfo.shared.lookupEndpoint(session: self.session, party: party)
-                        if socketConnection == nil || socketConnection!.socketManager == nil {
-                            continue
-                        }
-                        if socketConnection!.socketManager!.defaultSocket.status == .connected && socketConnection!.socketManager!.defaultSocket.sid != nil  {
-                            connections += 1
-                            print("party " + String(party) + " connected, socket id: " + (socketConnection!.socketManager!.defaultSocket.sid!))
-                            connectedParties.append(party)
-                        }
-                    }
-                }
-            }
+        while !client.checkConnected()
+        {
+            
         }
-
-        print("party indexes")
-        print(partyIndexes)
-        print("connected parties")
-        print(connectedParties)
         let precompute = try! client.precompute(serverCoeffs: coeffs, signatures: sigs)
     }
 }
