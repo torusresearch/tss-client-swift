@@ -47,6 +47,24 @@ internal final class TSSConnectionInfo {
                 }
                 socketManagers.remove(at: i)
             }
+            if let i = endpoints.firstIndex(where: { $0.session == session && $0.party == party }) {
+                endpoints.remove(at: i)
+            }
+        }
+    }
+    
+    public func removeAll(session: String) {
+        queue.sync(flags: .barrier) {
+            endpoints.removeAll(where: { $0.session == session })
+            if let i = socketManagers.firstIndex(where: { $0.session == session }) {
+                if socketManagers[i].socketManager !== nil {
+                    socketManagers[i].socketManager!.defaultSocket.disconnect()
+                }
+                socketManagers.remove(at: i)
+            }
+            if let i = endpoints.firstIndex(where: { $0.session == session }) {
+                endpoints.remove(at: i)
+            }
         }
     }
 }

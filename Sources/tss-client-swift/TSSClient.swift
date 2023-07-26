@@ -335,7 +335,7 @@ public class TSSClient {
 
     public func cleanup(signatures: [String]) throws {
         MessageQueue.shared.removeMessages(session: session)
-        EventQueue.shared.clearEvents(session: session)
+        EventQueue.shared.removeEvents(session: session)
         consumed = false
         ready = false
 
@@ -417,5 +417,11 @@ public class TSSClient {
         }
         
         return true
+    }
+    
+    deinit {
+        TSSConnectionInfo.shared.removeAll(session: session)
+        MessageQueue.shared.removeMessages(session: session)
+        EventQueue.shared.removeEvents(session: session)
     }
 }
