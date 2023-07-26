@@ -221,7 +221,7 @@ public class TSSClient {
         }
     }
 
-    public func sign(message: String, hashOnly: Bool, original_message: String, precompute: Precompute,  signatures: [String]) throws -> (BigInt, BigInt, BigInt) {
+    public func sign(message: String, hashOnly: Bool, original_message: String, precompute: Precompute, signatures: [String]) throws -> (BigInt, BigInt, BigInt) {
         if try isReady() == false {
             throw TSSClientError.errorWithMessage("Client is not ready")
         }
@@ -308,6 +308,7 @@ public class TSSClient {
         let sighex = decoded!.toHexString()
         let r = BigInt(sighex.prefix(64), radix: 16)!
         var s = BigInt(sighex.suffix(from: sighex.index(sighex.startIndex, offsetBy: 64)), radix: 16)!
+        // Check this
         var recoveryParam = BigInt(integerLiteral: Int64(decoded_r!.bytes[63]) % 2)
 
         if _sLessThanHalf {

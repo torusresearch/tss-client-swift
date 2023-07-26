@@ -217,141 +217,26 @@ final class tss_client_swiftTests: XCTestCase {
         while !(try! client.isReady()) {
             // no-op
         }
+    
+        let (s, r, v) = try! client.sign(message: msgHash, hashOnly: true, original_message: msg, precompute: precompute, signatures: sigs)
         
-        let signature = try! client.sign(message: msgHash, hashOnly: true, original_message: msg, precompute: precompute, signatures: sigs)
+        try! client.cleanup(signatures: sigs)
+        
+        //TODO: Finish test
         /*
-         await client.ready();
+        print(v.serialize())
+        let secpSigMarshalled = SECP256K1.marshalSignature(v: v.serialize(), r: r.serialize().suffix(32), s: s.serialize().suffix(32))!
 
-         // initiate signature.
-         const signature = await client.sign(tss, msgHash.toString("base64"), true, msg, "keccak256", { signatures });
-
-         const hexToDecimal = (x) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
-         const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
-
-         client.log(`pubkey, ${JSON.stringify(pubKey)}`);
-         client.log(`msgHash: 0x${msgHash.toString("hex")}`);
-         client.log(`signature: 0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}${new BN(27 + signature.recoveryParam).toString(16)}`);
-         client.log(`address: 0x${Buffer.from(privateToAddress(`0x${privKey.toString(16, 64)}`)).toString("hex")}`);
+        let pk = SECP256K1.recoverPublicKey(hash: Data(hex: msgHash), signature: secpSigMarshalled, compressed: false)!
+        
+        print(pk)
+        print(publicKey)
+        XCTAssert()
+         */
+        
+        /*
          const passed = ec.verify(msgHash, signature, pubk);
 
-         client.log(`passed: ${passed}`);
-         client.log(`precompute time: ${client._endPrecomputeTime - client._startPrecomputeTime}`);
-         client.log(`signing time: ${client._endSignTime - client._startSignTime}`);
-         await client.cleanup(tss, { signatures });
-         client.log("client cleaned up");
          */
     }
 }
-
-/*
- import { Client, localStorageDB } from "@toruslabs/tss-client";
- import * as tss from "@toruslabs/tss-lib";
- import BN from "bn.js";
- import eccrypto, { generatePrivate } from "eccrypto";
- import { privateToAddress } from "ethereumjs-utils";
- import keccak256 from "keccak256";
-
- import { getEcCrypto } from "./utils";
- import { createSockets, distributeShares, getSignatures } from "./localUtils";
-
- const DELIMITERS = {
-     Delimiter1: "\u001c",
-     Delimiter2: "\u0015",
-     Delimiter3: "\u0016",
-     Delimiter4: "\u0017",
-   };
- const servers = 4;
- const msg = "hello world";
- const msgHash = keccak256(msg);
- const clientIndex = servers - 1;
- const ec = getEcCrypto();
-
- const tssImportUrl = `${window.location.origin}/dkls_19.wasm`;
-
- const log = (...args: unknown[]) => {
-     let msg = "";
-     args.forEach((arg) => {
-       msg += JSON.stringify(arg);
-       msg += " ";
-     });
-     console.log(msg);
-   };
-
- const runTest = async () => {
-   // this identifier is only required for testing,
-   // so that clients cannot override shares of actual users incase
-   // share route is exposed in production, which is exposed only in development/testing
-   // by default.
-   const testingRouteIdentifier = "testingShares";
-   const randomNonce = keccak256(generatePrivate().toString("hex") + Date.now());
-   const vid = `test_verifier_name${DELIMITERS.Delimiter1}test_verifier_id`;
-   const session = `${testingRouteIdentifier}${vid}${DELIMITERS.Delimiter2}default${DELIMITERS.Delimiter3}0${
-     DELIMITERS.Delimiter4
-     }${randomNonce.toString("hex")}${testingRouteIdentifier}`;
-
-   // generate mock signatures.
-   const signatures = getSignatures();
-
-   // const session = `test:${Date.now()}`;
-
-   const parties = 4;
-   const clientIndex = parties - 1;
-
-   // generate endpoints for servers
-   const { endpoints, tssWSEndpoints, partyIndexes } = generateEndpoints(parties, clientIndex);
-
-   // setup mock shares, sockets and tss wasm files.
-   const [{ pubKey, privKey }, sockets] = await Promise.all([
-     setupMockShares(endpoints, partyIndexes, session),
-     setupSockets(tssWSEndpoints),
-     tss.default(tssImportUrl),
-   ]);
-
-   const serverCoeffs = {};
-   const participatingServerDKGIndexes = [1, 2, 3];
-
-   for (let i = 0; i < participatingServerDKGIndexes.length; i++) {
-     const serverIndex = participatingServerDKGIndexes[i];
-     serverCoeffs[serverIndex] = new BN(1).toString("hex");
-   }
-   // get the shares.
-   const share = await localStorageDB.get(`session-${session}:share`);
-   const client = new Client(session, clientIndex, partyIndexes, endpoints, sockets, share, pubKey, true, tssImportUrl);
-   client.log = log;
-   // initiate precompute
-   client.precompute(tss, { signatures, server_coeffs: serverCoeffs });
-   await client.ready();
-
-   // initiate signature.
-   const signature = await client.sign(tss, msgHash.toString("base64"), true, msg, "keccak256", { signatures });
-
-   const hexToDecimal = (x) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
-   const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
-
-   client.log(`pubkey, ${JSON.stringify(pubKey)}`);
-   client.log(`msgHash: 0x${msgHash.toString("hex")}`);
-   client.log(`signature: 0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}${new BN(27 + signature.recoveryParam).toString(16)}`);
-   client.log(`address: 0x${Buffer.from(privateToAddress(`0x${privKey.toString(16, 64)}`)).toString("hex")}`);
-   const passed = ec.verify(msgHash, signature, pubk);
-
-   client.log(`passed: ${passed}`);
-   client.log(`precompute time: ${client._endPrecomputeTime - client._startPrecomputeTime}`);
-   client.log(`signing time: ${client._endSignTime - client._startSignTime}`);
-   await client.cleanup(tss, { signatures });
-   client.log("client cleaned up");
- };
-
- export const runLocalServerTest = async()=>{
-   try {
-     await runTest();
-     console.log("test succeeded");
-     document.title = "Test succeeded";
-   } catch (error) {
-     console.log("test failed", error);
-     document.title = "Test failed";
-   }
- };
-
- runLocalServerTest();
-
- */
