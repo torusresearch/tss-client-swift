@@ -82,19 +82,26 @@ public class TSSClient {
                 let result = "not supported"
                 return (result as NSString).utf8String!
             }
-            var message: Message?
             var found = false
-            var count = 0
-            // TODO: Implement a timeout here, if a message is never received it will wait indefinitely
+            let now = Date()
+            var result = ""
+            let group = DispatchGroup()
+            group.enter()
+            var message: Message?
             while !found {
                 if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
                     message = msg
                     found = true
                 }
-                count += 1
+                if Date() > now.addingTimeInterval(5) { // 5 second wait max
+                    break
+                }
             }
-            MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
-            let result = message!.msgData
+            if found {
+                result = message!.msgData
+                MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
+            }
+            group.leave()
             return (result as NSString).utf8String
         }
 
@@ -184,7 +191,7 @@ public class TSSClient {
                     "signatures": signatures,
                 ]
 
-                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys,.withoutEscapingSlashes])
+                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys, .withoutEscapingSlashes])
                 // let jsonString = NSString(data: jsonData, encoding: String.Encoding.utf8.rawValue)!
                 // print(jsonString)
                 request.httpBody = jsonData
@@ -204,7 +211,7 @@ public class TSSClient {
                 sem.wait()
             }
         }
-        
+
         if !setup() {
             throw TSSClientError.errorWithMessage("Failed to setup client")
         }
@@ -267,10 +274,10 @@ public class TSSClient {
                     "hash_algo": "keccak256",
                     "signatures": signatures,
                 ]
-                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys,.withoutEscapingSlashes])
-                
+                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys, .withoutEscapingSlashes])
+
                 request.httpBody = jsonData
-                
+
                 let sem = DispatchSemaphore(value: 0)
                 // data, response, error
                 urlSession.dataTask(with: request) { data, resp, _ in
@@ -282,9 +289,9 @@ public class TSSClient {
                             print("Failed send route for" + url.absoluteString)
                         }
                     }
-                    
+
                     if let data = data {
-                        let sig = try! JSONDecoder().decode([String:String].self, from: data).first!.value
+                        let sig = try! JSONDecoder().decode([String: String].self, from: data).first!.value
                         fragments.append(sig)
                     } else {
                         print("Party \(i) returned no signature fragment")
@@ -353,7 +360,7 @@ public class TSSClient {
                 request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
                 let msg: [String: Any] = [
                     "session": session,
-                    "signatures": signatures
+                    "signatures": signatures,
                 ]
                 let jsonData = try JSONSerialization.data(withJSONObject: msg)
 
@@ -385,7 +392,7 @@ public class TSSClient {
         if counts[EventType.PrecomputeError] ?? 0 > 0 {
             throw TSSClientError.errorWithMessage("Error occured during precompute")
         }
-        
+
         if counts[EventType.PrecomputeComplete] ?? 0 == parties {
             return true
         }
@@ -415,10 +422,10 @@ public class TSSClient {
         if connections != (parties - 1) {
             return false
         }
-        
+
         return true
     }
-    
+
     deinit {
         TSSConnectionInfo.shared.removeAll(session: session)
         MessageQueue.shared.removeMessages(session: session)
