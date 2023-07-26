@@ -95,6 +95,11 @@ public class TSSClient {
                 }
                 if Date() > now.addingTimeInterval(5) { // 5 second wait max
                     break
+                } else {
+                    let counts = EventQueue.shared.countEvents(session: session)
+                    if counts[EventType.PrecomputeError] ?? 0 > 0 {
+                        break
+                    }
                 }
             }
             if found {
