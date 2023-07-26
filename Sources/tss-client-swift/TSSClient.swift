@@ -216,7 +216,7 @@ public class TSSClient {
             throw TSSClientError.errorWithMessage("Failed to setup client")
         }
         do {
-            let partyArray = Array(1 ... parties).map({ String($0) }).joined(separator: ",")
+            let partyArray = Array(0 ..< parties).map({ String($0) }).joined(separator: ",")
             let counterparties = try Counterparties(parties: partyArray)
             let result = try signer.precompute(parties: counterparties, rng: rng, comm: comm)
             consumed = false
