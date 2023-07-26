@@ -11,7 +11,7 @@ internal final class TSSSocket {
     init(session: String, party: Int32, url: URL?) {
         self.party = party
         self.session = session
-        let queue = DispatchQueue(label: "socket.queue.party"+String(party))
+        let queue = DispatchQueue(label: "socket.queue.party"+String(party), qos: .utility, attributes: .concurrent)
         self.queues.append(queue)
         socketManager = SocketManager(socketURL: url!,
                                       config: [
@@ -61,6 +61,7 @@ internal final class TSSSocket {
                 ack.with(1)
             }
         })
+        socket.off("send")
         socket.on("send", callback: {data , ack in
             if session != self.session {
                 print("ignoring message for a different session...")

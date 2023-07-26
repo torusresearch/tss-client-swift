@@ -404,7 +404,8 @@ public class TSSClient {
                     if socketConnection == nil || socketConnection!.socketManager == nil {
                         continue
                     }
-                    if socketConnection!.socketManager!.defaultSocket.status == .connected && socketConnection!.socketManager!.defaultSocket.sid != nil {
+                    if socketConnection!.socketManager!.status == .connected &&
+                        socketConnection!.socketManager!.defaultSocket.status == .connected && socketConnection!.socketManager!.defaultSocket.sid != nil {
                         connections += 1
                         print("party " + String(party) + " connected, socket id: " + (socketConnection!.socketManager!.defaultSocket.sid!))
                         connectedParties.append(party)
