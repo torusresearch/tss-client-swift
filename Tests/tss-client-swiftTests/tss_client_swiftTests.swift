@@ -217,6 +217,8 @@ final class tss_client_swiftTests: XCTestCase {
         while !(try! client.isReady()) {
             // no-op
         }
+        
+        let signature = try! client.sign(message: msgHash, hashOnly: true, original_message: msg, precompute: precompute, signatures: sigs)
         /*
          await client.ready();
 

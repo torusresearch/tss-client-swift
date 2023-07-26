@@ -54,7 +54,7 @@ public final class Utilities {
         let rPointer = UnsafePointer<Int8>((r as NSString).utf8String)
         let pkPointer = UnsafePointer<Int8>((pubKey as NSString).utf8String)
         let result = withUnsafeMutablePointer(to: &errorCode, { error in
-            dkls_local_verify(messagePointer, hashOnly,rPointer,signatureFragments.pointer, pkPointer, error)
+            dkls_local_verify(messagePointer, hashOnly, rPointer ,signatureFragments.pointer, pkPointer, error)
                 })
         guard errorCode == 0 else {
             throw DKLSError("Error verifying locally")

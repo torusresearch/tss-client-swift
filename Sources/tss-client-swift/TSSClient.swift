@@ -85,22 +85,15 @@ public class TSSClient {
             var message: Message?
             var found = false
             var count = 0
-            // let timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { (timer) in
+            // TODO: Implement a timeout here, if a message is never received it will wait indefinitely
             while !found {
                 if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
                     message = msg
                     found = true
-                    // timer.invalidate()
-                }
-                if count == 5000 {
-                    // timer.invalidate()
-                    let messages = MessageQueue.shared.allMessages(session: session)
-                    print("waiting for message: sender = " + String(party) + " recipient = " + String(index))
                 }
                 count += 1
             }
             MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
-            // }
             let result = message!.msgData
             return (result as NSString).utf8String
         }
@@ -243,64 +236,68 @@ public class TSSClient {
 
         var signingMessage = ""
         if hashOnly {
-            let hash = TSSHelpers.hashMessage(message: message)
-            if TSSHelpers.hashMessage(message: original_message) != hash {
+            if TSSHelpers.hashMessage(message: original_message) != message {
                 throw TSSClientError.errorWithMessage("hash of original message does not match message")
             }
-            signingMessage = hash.toBase64()
+            signingMessage = Data(hexString: message)!.base64EncodedString()
         } else {
-            signingMessage = message
+            signingMessage = original_message
         }
 
         var fragments: [String] = []
         for i in 0 ..< precomputes {
-            let (tssConnection, _) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
-            let urlSession = URLSession.shared
-            let url = URL(string: tssConnection!.url!.absoluteString + "/send")!
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
-            request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
-            request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
-            request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
-            let msg: [String: Any] = [
-                "session": session,
-                "sender": index,
-                "recipient": i,
-                "msg": signingMessage,
-                "hash_only": hashOnly,
-                "original_message": original_message,
-                "hash_algo": "keccak256",
-                "signatures": signatures,
-            ]
-            let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys,.withoutEscapingSlashes])
-
-            request.httpBody = jsonData
-
-            let sem = DispatchSemaphore(value: 0)
-            // data, response, error
-            urlSession.dataTask(with: request) { data, resp, _ in
-                defer {
-                    sem.signal()
-                }
-                if let data = data {
-                    let resultString: String = String(decoding: data, as: UTF8.self)
-                    fragments.append(resultString)
-                }
-                if let httpResponse = resp as? HTTPURLResponse {
-                    if httpResponse.statusCode != 200 {
-                        print("Failed send route for" + url.absoluteString)
+            if i != index {
+                let (tssConnection, _) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
+                let urlSession = URLSession.shared
+                let url = URL(string: tssConnection!.url!.absoluteString + "/sign")!
+                var request = URLRequest(url: url)
+                request.httpMethod = "POST"
+                request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
+                request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
+                request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
+                request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+                request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
+                let msg: [String: Any] = [
+                    "session": session,
+                    "sender": index,
+                    "recipient": i,
+                    "msg": signingMessage,
+                    "hash_only": hashOnly,
+                    "original_message": original_message,
+                    "hash_algo": "keccak256",
+                    "signatures": signatures,
+                ]
+                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys,.withoutEscapingSlashes])
+                
+                request.httpBody = jsonData
+                
+                let sem = DispatchSemaphore(value: 0)
+                // data, response, error
+                urlSession.dataTask(with: request) { data, resp, _ in
+                    defer {
+                        sem.signal()
                     }
-                }
-            }.resume()
-            sem.wait()
+                    if let httpResponse = resp as? HTTPURLResponse {
+                        if httpResponse.statusCode != 200 {
+                            print("Failed send route for" + url.absoluteString)
+                        }
+                    }
+                    
+                    if let data = data {
+                        let sig = try! JSONDecoder().decode([String:String].self, from: data).first!.value
+                        fragments.append(sig)
+                    } else {
+                        print("Party \(i) returned no signature fragment")
+                    }
+                }.resume()
+                sem.wait()
+            }
         }
 
         let signature_fragment = try signWithPrecompute(message: signingMessage, hashOnly: hashOnly, precompute: precompute)
         fragments.append(signature_fragment)
 
-        let input = fragments.joined(separator: ", ")
+        let input = fragments.joined(separator: ",")
         let sigFrags = try SignatureFragments(input: input)
 
         let signature = try verifyWithPrecompute(message: signingMessage, hashOnly: hashOnly, precompute: precompute, fragments: sigFrags, pubKey: pubKey)
