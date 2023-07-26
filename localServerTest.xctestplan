@@ -14,6 +14,11 @@
         "argument" : "LOCAL_SERVERS"
       }
     ],
+    "defaultTestExecutionTimeAllowance" : null,
+    "maximumTestExecutionTimeAllowance" : 60,
+    "maximumTestRepetitions" : 5,
+    "repeatInNewRunnerProcess" : true,
+    "testRepetitionMode" : "fixedIterations",
     "testTimeoutsEnabled" : true
   },
   "testTargets" : [
