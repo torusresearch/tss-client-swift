@@ -315,8 +315,6 @@ public class TSSClient {
         let sighex = decoded!.toHexString()
         let r = BigInt(sighex.prefix(64), radix: 16)!
         var s = BigInt(sighex.suffix(from: sighex.index(sighex.startIndex, offsetBy: 64)), radix: 16)!
-        // Check this
-        
         var recoveryParam = UInt8(decoded_r!.bytes.last! % 2)
 
         if _sLessThanHalf {
