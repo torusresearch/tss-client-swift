@@ -14,7 +14,16 @@ internal final class EventQueue {
     
     public func addEvent(event: Event) {
         queue.sync(flags: .barrier) {
-            events.append(event)
+            let found = events.first(where: { $0.party == event.party && $0.session == $0.session && $0.type == event.type && $0.occurred > lastFocus })
+            if found == nil {
+                events.append(event)
+            }
+        }
+    }
+    
+    public func findEvent(session: String, event: EventType) -> [Event] {
+        return queue.sync {
+            return events.filter({ $0.occurred >= lastFocus && $0.session == session && $0.type == event })
         }
     }
     

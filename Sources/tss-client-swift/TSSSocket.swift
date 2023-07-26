@@ -72,7 +72,7 @@ internal final class TSSSocket {
 
             let json = try! JSONSerialization.data(withJSONObject: data[0])
             let msg = try! JSONDecoder().decode(TssPrecomputeUpdate.self, from: json)
-            EventQueue.shared.addEvent(event: Event(message: String(msg.party), session: msg.session, party: Int32(msg.party), occurred: Date(), type: EventType.PrecomputeComplete))
+            EventQueue.shared.addEvent(event: Event(message: String(msg.party), session: msg.session, party: Int32(msg.party), occurred: Date(), type: EventType.PrecomputeError))
             if ack.expected {
                 ack.with(1)
             }

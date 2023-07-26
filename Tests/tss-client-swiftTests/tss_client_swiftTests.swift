@@ -211,9 +211,33 @@ final class tss_client_swiftTests: XCTestCase {
         let client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
         while !client.checkConnected()
         {
-            
+            // no-op
         }
         let precompute = try! client.precompute(serverCoeffs: coeffs, signatures: sigs)
+        while !(try! client.isReady()) {
+            // no-op
+        }
+        /*
+         await client.ready();
+
+         // initiate signature.
+         const signature = await client.sign(tss, msgHash.toString("base64"), true, msg, "keccak256", { signatures });
+
+         const hexToDecimal = (x) => ec.keyFromPrivate(x, "hex").getPrivate().toString(10);
+         const pubk = ec.recoverPubKey(hexToDecimal(msgHash), signature, signature.recoveryParam, "hex");
+
+         client.log(`pubkey, ${JSON.stringify(pubKey)}`);
+         client.log(`msgHash: 0x${msgHash.toString("hex")}`);
+         client.log(`signature: 0x${signature.r.toString(16, 64)}${signature.s.toString(16, 64)}${new BN(27 + signature.recoveryParam).toString(16)}`);
+         client.log(`address: 0x${Buffer.from(privateToAddress(`0x${privKey.toString(16, 64)}`)).toString("hex")}`);
+         const passed = ec.verify(msgHash, signature, pubk);
+
+         client.log(`passed: ${passed}`);
+         client.log(`precompute time: ${client._endPrecomputeTime - client._startPrecomputeTime}`);
+         client.log(`signing time: ${client._endSignTime - client._startSignTime}`);
+         await client.cleanup(tss, { signatures });
+         client.log("client cleaned up");
+         */
     }
 }
 

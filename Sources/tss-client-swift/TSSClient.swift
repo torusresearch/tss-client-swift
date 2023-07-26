@@ -387,7 +387,8 @@ public class TSSClient {
         if counts[EventType.PrecomputeError] ?? 0 > 0 {
             throw TSSClientError.errorWithMessage("Error occured during precompute")
         }
-        if counts[EventType.PrecomputeComplete] == parties {
+        
+        if counts[EventType.PrecomputeComplete] ?? 0 == parties {
             return true
         }
         return false
