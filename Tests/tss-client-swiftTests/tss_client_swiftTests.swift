@@ -134,8 +134,10 @@ final class tss_client_swiftTests: XCTestCase {
                     "session": session,
                     "share": TSSHelpers.base64ToBase64url(base64: try TSSHelpers.base64Share(share: share)),
                 ]
-                let jsonData = try JSONSerialization.data(withJSONObject: msg)
-
+                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys, .withoutEscapingSlashes])
+                let jsonString = NSString(data: jsonData, encoding: String.Encoding.utf8.rawValue)!
+                print(jsonString)
+                
                 request.httpBody = jsonData
 
                 let sem = DispatchSemaphore(value: 0)

@@ -63,12 +63,15 @@ public class TSSClient {
         self.pubKey = pubKey
 
         for (index, item) in endpoints.enumerated() {
+            print(index)
             if index != self.index {
                 TSSConnectionInfo.shared.addInfo(session: session, party: Int32(index), endpoint: item, socketUrl: tssSocketEndpoints[index])
             }
         }
 
         let readMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?) -> UnsafePointer<CChar>?)? = { sessionCString, index, party, msgTypeCString in
+            // index = recipient
+            // party = sender
             let session = String(cString: sessionCString!)
             let msgType = String(cString: msgTypeCString!)
             var cast = UnsafeMutablePointer(mutating: sessionCString)
@@ -90,10 +93,10 @@ public class TSSClient {
                     found = true
                     // timer.invalidate()
                 }
-                if count % 5000 == 0 {
+                if count == 5000 {
                     // timer.invalidate()
                     let messages = MessageQueue.shared.allMessages(session: session)
-                    print("waiting for message: " + msgType + " from " + String(party) + " for " + String(index))
+                    print("waiting for message: sender = " + String(party) + " recipient = " + String(index))
                 }
                 count += 1
             }
@@ -104,7 +107,7 @@ public class TSSClient {
         }
 
         let sendMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Bool)? = { sessionCString, index, recipient, msgTypeCString, msgDataCString in
-
+            // index = sender
             let session = String(cString: sessionCString!)
             let msgType = String(cString: msgTypeCString!)
             let msgData = String(cString: msgDataCString!)
@@ -188,7 +191,7 @@ public class TSSClient {
                     "signatures": signatures,
                 ]
 
-                let jsonData = try JSONSerialization.data(withJSONObject: msg)
+                let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys,.withoutEscapingSlashes])
                 let jsonString = NSString(data: jsonData, encoding: String.Encoding.utf8.rawValue)!
                 print(jsonString)
                 request.httpBody = jsonData
@@ -208,7 +211,7 @@ public class TSSClient {
                 sem.wait()
             }
         }
-
+        
         if !setup() {
             throw TSSClientError.errorWithMessage("Failed to setup client")
         }
@@ -225,7 +228,7 @@ public class TSSClient {
         }
     }
 
-    public func sign(message: String, hashOnly: Bool, original_message: String, precompute: Precompute) throws -> (BigInt, BigInt, BigInt) {
+    public func sign(message: String, hashOnly: Bool, original_message: String, precompute: Precompute,  signatures: [String]) throws -> (BigInt, BigInt, BigInt) {
         if try isReady() == false {
             throw TSSClientError.errorWithMessage("Client is not ready")
         }
@@ -269,8 +272,9 @@ public class TSSClient {
                 "hash_only": hashOnly,
                 "original_message": original_message,
                 "hash_algo": "keccak256",
+                "signatures": signatures,
             ]
-            let jsonData = try JSONSerialization.data(withJSONObject: msg)
+            let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys,.withoutEscapingSlashes])
 
             request.httpBody = jsonData
 
@@ -331,7 +335,7 @@ public class TSSClient {
         return try Utilities.localVerify(message: message, hashOnly: hashOnly, precompute: precompute, signatureFragments: fragments, pubKey: pubKey)
     }
 
-    public func cleanup() throws {
+    public func cleanup(signatures: [String]) throws {
         MessageQueue.shared.removeMessages(session: session)
         EventQueue.shared.clearEvents(session: session)
         consumed = false
@@ -351,6 +355,7 @@ public class TSSClient {
                 request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
                 let msg: [String: Any] = [
                     "session": session,
+                    "signatures": signatures
                 ]
                 let jsonData = try JSONSerialization.data(withJSONObject: msg)
 
