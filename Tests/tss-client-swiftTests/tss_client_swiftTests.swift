@@ -224,8 +224,8 @@ final class tss_client_swiftTests: XCTestCase {
 
         XCTAssert(pk == publicKey)
 
-        let pkHex64 = try! TSSHelpers.hexPublicKey(pubKey: pk, return64Bytes: true)
-        let pkHex65 = try! TSSHelpers.hexPublicKey(pubKey: pk, return64Bytes: false)
+        _ = try! TSSHelpers.hexUncompressedPublicKey(pubKey: pk, return64Bytes: true)
+        let pkHex65 = try! TSSHelpers.hexUncompressedPublicKey(pubKey: pk, return64Bytes: false)
 
         let skToPkHex = SECP256K1.privateToPublic(privateKey: privateKey)!.hexString
 
