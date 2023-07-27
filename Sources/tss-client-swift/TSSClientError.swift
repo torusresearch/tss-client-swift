@@ -1,6 +1,6 @@
 import Foundation
 
-public struct DKLSError: Error {
+public struct TSSClientError: Error {
     private let message: String
 
     internal init(_ message: String) {

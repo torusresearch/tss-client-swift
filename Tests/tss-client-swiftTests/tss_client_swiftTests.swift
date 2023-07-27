@@ -51,7 +51,7 @@ final class tss_client_swiftTests: XCTestCase {
         return sigs
     }
 
-    private func getLagrangeCoefficients(parties: [BigInt], party: BigInt) throws -> BigInt {
+    private func getLagrangeCoefficients(parties: [BigInt], party: BigInt) -> BigInt {
         let partyIndex = party + 1
         var upper = BigInt(1)
         var lower = BigInt(1)
@@ -68,19 +68,15 @@ final class tss_client_swiftTests: XCTestCase {
         }
 
         let lowerInverse = lower.inverse(TSSClient.modulusValueSigned)
-        if lowerInverse == nil {
-            throw TSSClientError.errorWithMessage("No modular inverse for lower when calculating lagrange coefficients")
-        }
+        XCTAssert(lowerInverse != nil)
         let delta = (upper * lowerInverse!).modulus(TSSClient.modulusValueSigned)
         return delta
     }
 
-    private func denormalizeShare(additiveShare: BigInt, parties: [BigInt], party: BigInt) throws -> BigInt {
-        let coeff = try getLagrangeCoefficients(parties: parties, party: party)
+    private func denormalizeShare(additiveShare: BigInt, parties: [BigInt], party: BigInt) -> BigInt {
+        let coeff = getLagrangeCoefficients(parties: parties, party: party)
         let coeffInverse = coeff.inverse(TSSClient.modulusValueSigned)
-        if coeffInverse == nil {
-            throw TSSClientError.errorWithMessage("No modular inverse of coeff when denormalizing share")
-        }
+        XCTAssert(coeffInverse != nil)
         return (additiveShare * coeffInverse!).modulus(TSSClient.modulusValueSigned)
     }
 
@@ -100,15 +96,13 @@ final class tss_client_swiftTests: XCTestCase {
         let reduced = additiveShares.reduce(0) {
             ($0 + $1).modulus(TSSClient.modulusValueSigned)
         }
-        if reduced.serialize().toHexString() != privKey.serialize().toHexString() {
-            throw TSSClientError.errorWithMessage("Additive shares don't sum up to private key")
-        }
+        XCTAssert(reduced.serialize().toHexString() == privKey.serialize().toHexString())
 
         // denormalize shares
         var shares: [BigInt] = []
         for (partyIndex, additiveShare) in additiveShares.enumerated() {
             let partiesBigInt = parties.map({ BigInt($0) })
-            let denormalizedShare = try denormalizeShare(additiveShare: additiveShare, parties: partiesBigInt, party: BigInt(partyIndex))
+            let denormalizedShare = denormalizeShare(additiveShare: additiveShare, parties: partiesBigInt, party: BigInt(partyIndex))
             shares.append(denormalizedShare)
         }
 
@@ -126,7 +120,7 @@ final class tss_client_swiftTests: XCTestCase {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
+                request.addValue("x-web3-session-id", forHTTPHeaderField: try! TSSClient.sid(session: session))
                 let msg: [String: Any] = [
                     "session": session,
                     "share": TSSHelpers.base64ToBase64url(base64: try TSSHelpers.base64Share(share: share)),

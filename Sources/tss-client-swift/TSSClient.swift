@@ -13,22 +13,13 @@ internal struct Delimiters {
     static let Delimiter4 = "\u{0017}"
 }
 
-public enum TSSClientError: Error {
-    case errorWithMessage(String)
-
-    var localizedDescription: String {
-        switch self {
-        case let .errorWithMessage(message):
-            return message
-        }
-    }
-}
-
 public class TSSClient {
     private static let CURVE_N: String = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+    /// Modulus value of the secp256k1 curve, without sign
     public static let modulusValueUnsigned = BigUInt(CURVE_N, radix: 16)!
+    /// Modulus value of the secp256k1 curve, with sign
     public static let modulusValueSigned = BigInt(CURVE_N, radix: 16)!
-    
+
     private(set) var session: String
     private(set) var parties: Int
     private var consumed: Bool = false
@@ -39,14 +30,29 @@ public class TSSClient {
     private var ready: Bool = false
     var pubKey: String
     private var _sLessThanHalf = true
+
+    /// Constructor
+    ///
+    /// - Parameters:
+    ///   - session: The session to be used
+    ///   - index: The party index of this client, indexing starts at zero, may not be greater than (parties.count-1)
+    ///   - parties: The indexes of all parties, including index
+    ///   - endpoints: Server endpoints for web requests, must be equal to parties.count, contains nil at endpoints.index == index
+    ///   - tssSocketEndpoints: Server endpoints for socket communication, contains nil at endpoints.index == index
+    ///   - share: The share for the client, base64 encoded bytes
+    ///   - pubKey: The public key, base64 encoded bytes
+    ///
+    /// - Returns: `TSSClient`
+    ///
+    /// - Throws: `TSSClientError`,`DKLSError`
     public init(session: String, index: Int32, parties: [Int32], endpoints: [URL?], tssSocketEndpoints: [URL?], share: String, pubKey: String) throws
     {
         if parties.count != tssSocketEndpoints.count {
-            throw TSSClientError.errorWithMessage("Parties and socket length must be equal")
+            throw TSSClientError("Parties and socket length must be equal")
         }
 
         if parties.count != endpoints.count {
-            throw TSSClientError.errorWithMessage("Parties and endpoint length must be equal")
+            throw TSSClientError("Parties and endpoint length must be equal")
         }
 
         self.index = index
@@ -140,7 +146,15 @@ public class TSSClient {
         return signer.setup(rng: rng, comm: comm)
     }
 
-    // calculates a precompute, each party calculates their own precompute
+    /// Performs the DKLS protocol to calculate a precompute for this client, each other party also calculates their own precompute
+    ///
+    /// - Parameters:
+    ///   - server_coeffs: The DKLS coefficients for the servers
+    ///   - signatures: The signatures for the servers
+    ///
+    /// - Returns: `Precompute`
+    ///
+    /// - Throws: `TSSClientError`,`DKLSError`
     public func precompute(serverCoeffs: [String: String], signatures: [String]) throws -> Precompute {
         EventQueue.shared.updateFocus(time: Date())
         for i in 0 ..< parties {
@@ -150,7 +164,7 @@ public class TSSClient {
                     if // tsssocket!.socketManager!.defaultSocket.status != SocketIOStatus.connected &&
                         tsssocket!.socketManager!.defaultSocket.sid != nil {
                     } else {
-                        throw TSSClientError.errorWithMessage("socket not connected yet, party:" + String(i) + ", session:" + session)
+                        throw TSSClientError("socket not connected yet, party:" + String(i) + ", session:" + session)
                     }
                 }
             }
@@ -169,7 +183,7 @@ public class TSSClient {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
+                request.addValue("x-web3-session-id", forHTTPHeaderField: try! TSSClient.sid(session: session))
 
                 let endpoints: [TSSEndpoint] = try TSSConnectionInfo.shared.allEndpoints(session: session)
                 var endpointStrings: [String] = endpoints.map({ $0.url!.absoluteString })
@@ -208,7 +222,7 @@ public class TSSClient {
         }
 
         if !setup() {
-            throw TSSClientError.errorWithMessage("Failed to setup client")
+            throw TSSClientError("Failed to setup client")
         }
         do {
             let partyArray = Array(0 ..< parties).map({ String($0) }).joined(separator: ",")
@@ -223,27 +237,44 @@ public class TSSClient {
         }
     }
 
-    public func sign(message: String, hashOnly: Bool, original_message: String, precompute: Precompute, signatures: [String]) throws -> (BigInt, BigInt, UInt8) {
+    /// Retrieves the signature fragments for each server, calculates its own fragment with the precompute, then performs local signing and verification
+    ///
+    /// - Parameters:
+    ///   - message: The message or message hash.
+    ///   - hashOnly: Whether message is the hash of the message.
+    ///   - originalMessage: The original message the hash was taken from, required if message is a hash.
+    ///   - precompute: The previously calculated Precompute for this client
+    ///   - signatures: The signatures for the servers
+    ///
+    /// - Returns: `(BigInt, BigInt, UInt8)`
+    ///
+    /// - Throws: `TSSClientError`,`DKLSError`
+    public func sign(message: String, hashOnly: Bool, original_message: String?, precompute: Precompute, signatures: [String]) throws -> (BigInt, BigInt, UInt8) {
         if try isReady() == false {
-            throw TSSClientError.errorWithMessage("Client is not ready")
+            throw TSSClientError("Client is not ready")
         }
         if consumed {
-            throw TSSClientError.errorWithMessage("This instance has already signed a message and cannot be reused")
+            throw TSSClientError("This instance has already signed a message and cannot be reused")
         }
 
         let precomputesComplete = EventQueue.shared.countEvents(session: session)[EventType.PrecomputeComplete] ?? 0
         if precomputesComplete != parties {
-            throw TSSClientError.errorWithMessage("Insufficient Precomputes")
+            throw TSSClientError("Insufficient Precomputes")
         }
 
         var signingMessage = ""
+
         if hashOnly {
-            if TSSHelpers.hashMessage(message: original_message) != message {
-                throw TSSClientError.errorWithMessage("hash of original message does not match message")
+            if let original_message = original_message {
+                if TSSHelpers.hashMessage(message: original_message) != message {
+                    throw TSSClientError("hash of original message does not match message")
+                }
+                signingMessage = Data(hexString: message)!.base64EncodedString()
+            } else {
+                throw TSSClientError("Original message has to be provided")
             }
-            signingMessage = Data(hexString: message)!.base64EncodedString()
         } else {
-            signingMessage = original_message
+            signingMessage = message
         }
 
         var fragments: [String] = []
@@ -258,14 +289,14 @@ public class TSSClient {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
+                request.addValue("x-web3-session-id", forHTTPHeaderField: try! TSSClient.sid(session: session))
                 let msg: [String: Any] = [
                     "session": session,
                     "sender": index,
                     "recipient": i,
                     "msg": signingMessage,
                     "hash_only": hashOnly,
-                    "original_message": original_message,
+                    "original_message": original_message ?? "",
                     "hash_algo": "keccak256",
                     "signatures": signatures,
                 ]
@@ -334,6 +365,13 @@ public class TSSClient {
         return try Utilities.localVerify(message: message, hashOnly: hashOnly, precompute: precompute, signatureFragments: fragments, pubKey: pubKey)
     }
 
+    /// Performs cleanup after signing, removing all messages, events and connections for this signer
+    ///
+    /// - Parameters:
+    ///   - signatures: The signatures for the servers
+    ///
+    ///
+    /// - Throws: `TSSClientError`
     public func cleanup(signatures: [String]) throws {
         MessageQueue.shared.removeMessages(session: session)
         EventQueue.shared.removeEvents(session: session)
@@ -351,7 +389,7 @@ public class TSSClient {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue("x-web3-session-id", forHTTPHeaderField: TSSClient.sid(session: session))
+                request.addValue("x-web3-session-id", forHTTPHeaderField: try! TSSClient.sid(session: session))
                 let msg: [String: Any] = [
                     "session": session,
                     "signatures": signatures,
@@ -377,14 +415,31 @@ public class TSSClient {
         }
     }
 
-    public static func sid(session: String) -> String {
-        return session.components(separatedBy: Delimiters.Delimiter4)[1]
+    /// Returns the session ID from the session
+    ///
+    /// - Parameters:
+    ///   - session: The session.
+    ///
+    /// - Returns: `String`
+    ///
+    /// - Throws: `TSSClientError`
+    public static func sid(session: String) throws -> String {
+        let split = session.components(separatedBy: Delimiters.Delimiter4)
+        if split.count < 2 {
+            throw TSSClientError("Session is invalid, does not have the correct delimiters")
+        }
+        return split[1]
     }
 
+    /// Checks notifications to determine if all parties have finished calculating a precompute before signing can be attempted, throws if a failure notification exists from any party
+    ///
+    /// - Returns: `Bool`
+    ///
+    /// - Throws: `TSSClientError`
     public func isReady() throws -> Bool {
         let counts = EventQueue.shared.countEvents(session: session)
         if counts[EventType.PrecomputeError] ?? 0 > 0 {
-            throw TSSClientError.errorWithMessage("Error occured during precompute")
+            throw TSSClientError("Error occured during precompute")
         }
 
         if counts[EventType.PrecomputeComplete] ?? 0 == parties {
@@ -393,6 +448,9 @@ public class TSSClient {
         return false
     }
 
+    /// Checks if socket connections have been established and are ready to be used, for all parties, before precompute can be attemped
+    ///
+    /// - Returns: `Bool`
     public func checkConnected() -> Bool {
         var connections = 0
         var connectedParties: [Int32] = []

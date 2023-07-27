@@ -5,7 +5,15 @@ import Foundation
 
 public final class Precompute {
     private(set) var pointer: OpaquePointer?
-
+    
+    /// Constructor
+    ///
+    /// - Parameters:
+    ///   - precompute: String representation of the precompute
+    ///
+    /// - Returns: `Precompute`
+    ///
+    /// - Throws: `DKLSError`
     public init(precompute: String) throws {
         let precomputeStringPointer = UnsafePointer<Int8>((precompute as NSString).utf8String)
         var errorCode: Int32 = -1
@@ -18,6 +26,11 @@ public final class Precompute {
         pointer = result
     }
 
+    /// Converts the precompute to string
+    ///
+    /// - Returns: `String`
+    ///
+    /// - Throws: `DKLSError`
     public func export() throws -> String {
         var errorCode: Int32 = -1
         let result = withUnsafeMutablePointer(to: &errorCode, { error in
@@ -32,7 +45,7 @@ public final class Precompute {
         return value
     }
 
-    public func getR() throws -> String {
+    internal func getR() throws -> String {
         var errorCode: Int32 = -1
         let precomputeString = try export()
         let precomputeStringPointer = UnsafePointer<Int8>((precomputeString as NSString).utf8String)
