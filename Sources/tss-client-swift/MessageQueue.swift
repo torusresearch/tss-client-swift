@@ -26,8 +26,7 @@ internal final class MessageQueue {
         }
     }
 
-    public func allMessages(session: String) -> [Message]
-    {
+    public func allMessages(session: String) -> [Message] {
         return queue.sync {
             return messages.filter({ $0.session == session })
         }

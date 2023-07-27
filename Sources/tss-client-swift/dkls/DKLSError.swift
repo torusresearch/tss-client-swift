@@ -11,4 +11,3 @@ public struct DKLSError: Error {
         return message
     }
 }
-

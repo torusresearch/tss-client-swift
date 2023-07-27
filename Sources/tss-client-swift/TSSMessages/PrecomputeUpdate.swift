@@ -1,6 +1,6 @@
 import Foundation
 
-public struct TssPrecomputeUpdate : Codable {
+public struct TssPrecomputeUpdate: Codable {
     let session: String
     let party: Int
 }

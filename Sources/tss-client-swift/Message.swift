@@ -6,7 +6,7 @@ internal final class Message {
     private(set) var recipient: UInt64
     private(set) var msgType: String
     private(set) var msgData: String
-    
+
     public init(session: String, sender: UInt64, recipient: UInt64, msgType: String, msgData: String) {
         self.session = session
         self.sender = sender

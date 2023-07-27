@@ -1,7 +1,7 @@
 import Foundation
 import SocketIO
 
-public struct TssRecvMsg : Codable {
+public struct TssRecvMsg: Codable {
     let session: String
     let sender: Int
     let recipient: Int

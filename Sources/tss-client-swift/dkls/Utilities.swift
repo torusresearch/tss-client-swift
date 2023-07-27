@@ -8,28 +8,28 @@ public final class Utilities {
         var errorCode: Int32 = -1
         let result = withUnsafeMutablePointer(to: &errorCode, { error in
             dkls_batch_size(error)
-                })
+        })
         guard errorCode == 0 else {
             throw DKLSError("Error getting batch size")
-            }
+        }
         return result
     }
-    
+
     public static func hashEncode(message: String) throws -> String {
         var errorCode: Int32 = -1
         let messagePointer = UnsafePointer<Int8>((message as NSString).utf8String)
         let result = withUnsafeMutablePointer(to: &errorCode, { error in
             dkls_hash_encode(messagePointer, error)
-                })
+        })
         guard errorCode == 0 else {
             throw DKLSError("Error encoding hash")
-            }
-        let value = String.init(cString: result!)
+        }
+        let value = String(cString: result!)
         let cast = UnsafeMutablePointer(mutating: result)
         dkls_string_free(cast)
         return value
     }
-    
+
     public static func localSign(message: String, hashOnly: Bool, precompute: Precompute) throws -> String {
         var errorCode: Int32 = -1
         let messagePointer = UnsafePointer<Int8>((message as NSString).utf8String)
@@ -37,16 +37,16 @@ public final class Utilities {
         let precomputeStringPointer = UnsafePointer<Int8>((precomputeString as NSString).utf8String)
         let result = withUnsafeMutablePointer(to: &errorCode, { error in
             dkls_local_sign(messagePointer, hashOnly, precomputeStringPointer, error)
-                })
+        })
         guard errorCode == 0 else {
             throw DKLSError("Error signing locally")
-            }
-        let value = String.init(cString: result!)
+        }
+        let value = String(cString: result!)
         let cast = UnsafeMutablePointer(mutating: result)
         dkls_string_free(cast)
         return value
     }
-    
+
     public static func localVerify(message: String, hashOnly: Bool, precompute: Precompute, signatureFragments: SignatureFragments, pubKey: String) throws -> String {
         var errorCode: Int32 = -1
         let messagePointer = UnsafePointer<Int8>((message as NSString).utf8String)
@@ -54,17 +54,17 @@ public final class Utilities {
         let rPointer = UnsafePointer<Int8>((r as NSString).utf8String)
         let pkPointer = UnsafePointer<Int8>((pubKey as NSString).utf8String)
         let result = withUnsafeMutablePointer(to: &errorCode, { error in
-            dkls_local_verify(messagePointer, hashOnly, rPointer ,signatureFragments.pointer, pkPointer, error)
-                })
+            dkls_local_verify(messagePointer, hashOnly, rPointer, signatureFragments.pointer, pkPointer, error)
+        })
         guard errorCode == 0 else {
             throw DKLSError("Error verifying locally")
-            }
-        let value = String.init(cString: result!)
+        }
+        let value = String(cString: result!)
         let cast = UnsafeMutablePointer(mutating: result)
         dkls_string_free(cast)
         return value
     }
-    
+
     public static func CStringFree(ptr: UnsafeMutablePointer<CChar>?) {
         dkls_string_free(ptr)
     }
