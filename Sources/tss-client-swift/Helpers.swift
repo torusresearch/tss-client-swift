@@ -50,7 +50,7 @@ public class TSSHelpers {
     }
     
     public static func hexUncompressedPublicKey(pubKey: Data, return64Bytes: Bool) throws -> String {
-        if pubKey.bytes.count == 65 && return64Bytes { // first byte is 04 prefix indicating uncompressed format, must be dropped for dkls
+        if pubKey.bytes.count == 65 && return64Bytes {
             if pubKey.bytes.first == 04 {
                 return Data(pubKey.bytes.dropFirst()).hexString
             } else {
