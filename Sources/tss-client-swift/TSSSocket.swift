@@ -11,7 +11,7 @@ internal final class TSSSocket {
     init(session: String, party: Int32, url: URL?) {
         self.party = party
         self.session = session
-        let queue = DispatchQueue(label: "socket.queue.party" + String(party) + "." + session, qos: .utility, attributes: .concurrent)
+        let queue = DispatchQueue(label: "socket.queue.party" + String(party) + "." + session, attributes: .concurrent)
         queues.append(queue)
 
         let config: SocketIOClientConfiguration
