@@ -239,8 +239,8 @@ public class TSSClient {
             throw TSSClientError.errorWithMessage("This instance has already signed a message and cannot be reused")
         }
 
-        let precomputes = EventQueue.shared.countEvents(session: session)[EventType.PrecomputeComplete] ?? 0
-        if precomputes != parties {
+        let precomputesComplete = EventQueue.shared.countEvents(session: session)[EventType.PrecomputeComplete] ?? 0
+        if precomputesComplete != parties {
             throw TSSClientError.errorWithMessage("Insufficient Precomputes")
         }
 
@@ -255,7 +255,7 @@ public class TSSClient {
         }
 
         var fragments: [String] = []
-        for i in 0 ..< precomputes {
+        for i in 0 ..< precomputesComplete {
             if i != index {
                 let (tssConnection, _) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
                 let urlSession = URLSession.shared
