@@ -77,4 +77,25 @@ public class TSSHelpers {
             .replacingOccurrences(of: "=", with: "")
         return base64url
     }
+
+    public static func verifySignature(msgHash: String, s: BigInt, r: BigInt, v: UInt8, pubKey: Data) -> Bool {
+        do {
+            let pk = try TSSHelpers.recoverPublicKey(msgHash: msgHash, s: s, r: r, v: v)
+            if pk == pubKey {
+                return true
+            }
+            return false
+        } catch {
+            return false
+        }
+    }
+
+    public static func hexSignature(s: BigInt, r: BigInt, v: UInt8) throws -> String {
+        if let secpSigMarshalled = SECP256K1.marshalSignature(v: v, r: r.serialize().suffix(32), s: s.serialize().suffix(32))
+        {
+            return secpSigMarshalled.toHexString()
+        } else {
+            throw TSSClientError.errorWithMessage("Problem with signature components")
+        }
+    }
 }
