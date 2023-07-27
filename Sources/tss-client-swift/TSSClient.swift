@@ -197,8 +197,6 @@ public class TSSClient {
                 ]
 
                 let jsonData = try JSONSerialization.data(withJSONObject: msg, options: [.sortedKeys, .withoutEscapingSlashes])
-                // let jsonString = NSString(data: jsonData, encoding: String.Encoding.utf8.rawValue)!
-                // print(jsonString)
                 request.httpBody = jsonData
 
                 let sem = DispatchSemaphore(value: 0)
