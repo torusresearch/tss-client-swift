@@ -1,4 +1,4 @@
-import tss_client_swift
+@testable import tss_client_swift
 import XCTest
 
 final class dklsTests: XCTestCase {

@@ -6,7 +6,6 @@ internal final class TSSConnectionInfo {
     static let shared = TSSConnectionInfo()
     private(set) var endpoints: [TSSEndpoint] = []
     private(set) var socketManagers: [TSSSocket] = []
-
     private var queue = DispatchQueue(label: "tss.messages.queue", attributes: .concurrent)
 
     private init() {}

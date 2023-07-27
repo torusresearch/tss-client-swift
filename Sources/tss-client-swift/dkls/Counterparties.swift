@@ -3,7 +3,7 @@ import Foundation
     import lib
 #endif
 
-public final class Counterparties {
+internal final class Counterparties {
     private(set) var pointer: OpaquePointer?
 
     public init(parties: String) throws {

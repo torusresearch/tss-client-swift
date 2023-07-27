@@ -3,7 +3,7 @@ import Foundation
     import lib
 #endif
 
-public final class ThresholdSigner {
+internal final class ThresholdSigner {
     private(set) var pointer: OpaquePointer?
 
     public init(session: String, playerIndex: Int32, parties: Int32, threshold: Int32, share: String, publicKey: String) throws {

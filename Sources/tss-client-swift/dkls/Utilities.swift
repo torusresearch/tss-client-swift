@@ -3,7 +3,7 @@ import Foundation
     import lib
 #endif
 
-public final class Utilities {
+internal final class Utilities {
     public static func batchSize() throws -> Int32 {
         var errorCode: Int32 = -1
         let result = withUnsafeMutablePointer(to: &errorCode, { error in

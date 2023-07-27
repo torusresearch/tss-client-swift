@@ -3,7 +3,7 @@ import Foundation
     import lib
 #endif
 
-public final class SignatureFragments {
+internal final class SignatureFragments {
     private(set) var pointer: OpaquePointer?
 
     public init(input: String) throws {

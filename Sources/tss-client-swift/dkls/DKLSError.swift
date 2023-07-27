@@ -1,6 +1,6 @@
 import Foundation
 
-public struct DKLSError: Error {
+internal struct DKLSError: Error {
     public let message: String
 
     public init(_ message: String) {

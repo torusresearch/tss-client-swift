@@ -1,10 +1,12 @@
 import CryptoSwift
 import Foundation
+import BigInt
+
 #if canImport(secp256k1)
     import secp256k1
 #endif
 
-public struct SECP256K1 {
+struct SECP256K1 {
     public struct UnmarshaledSignature {
         public var v: UInt8 = 0
         public var r = Data(repeating: 0, count: 32)

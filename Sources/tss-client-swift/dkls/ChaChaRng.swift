@@ -3,7 +3,7 @@ import Foundation
     import lib
 #endif
 
-public final class ChaChaRng {
+internal final class ChaChaRng {
     private(set) var pointer: OpaquePointer?
 
     public init() throws {

@@ -1,7 +1,7 @@
 import Foundation
 import SocketIO
 
-public struct TssSendMsg: SocketData {
+internal struct TssSendMsg: SocketData {
     let session: String
     let index: Int
     let recipient: Int

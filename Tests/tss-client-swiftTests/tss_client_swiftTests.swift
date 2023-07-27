@@ -61,27 +61,27 @@ final class tss_client_swiftTests: XCTestCase {
             if party != otherParty {
                 var otherPartyIndexNeg = otherPartyIndex
                 otherPartyIndexNeg.negate()
-                upper = (upper * otherPartyIndexNeg).modulus(modulusValueSigned)
-                let temp = (partyIndex - otherPartyIndex).modulus(modulusValueSigned)
-                lower = (lower * temp).modulus(modulusValueSigned)
+                upper = (upper * otherPartyIndexNeg).modulus(TSSClient.modulusValueSigned)
+                let temp = (partyIndex - otherPartyIndex).modulus(TSSClient.modulusValueSigned)
+                lower = (lower * temp).modulus(TSSClient.modulusValueSigned)
             }
         }
 
-        let lowerInverse = lower.inverse(modulusValueSigned)
+        let lowerInverse = lower.inverse(TSSClient.modulusValueSigned)
         if lowerInverse == nil {
             throw TSSClientError.errorWithMessage("No modular inverse for lower when calculating lagrange coefficients")
         }
-        let delta = (upper * lowerInverse!).modulus(modulusValueSigned)
+        let delta = (upper * lowerInverse!).modulus(TSSClient.modulusValueSigned)
         return delta
     }
 
     private func denormalizeShare(additiveShare: BigInt, parties: [BigInt], party: BigInt) throws -> BigInt {
         let coeff = try getLagrangeCoefficients(parties: parties, party: party)
-        let coeffInverse = coeff.inverse(modulusValueSigned)
+        let coeffInverse = coeff.inverse(TSSClient.modulusValueSigned)
         if coeffInverse == nil {
             throw TSSClientError.errorWithMessage("No modular inverse of coeff when denormalizing share")
         }
-        return (additiveShare * coeffInverse!).modulus(modulusValueSigned)
+        return (additiveShare * coeffInverse!).modulus(TSSClient.modulusValueSigned)
     }
 
     private func distributeShares(privKey: BigInt, parties: [Int32], endpoints: [String?], localClientIndex: Int32, session: String) throws {
@@ -94,11 +94,11 @@ final class tss_client_swiftTests: XCTestCase {
             shareSum += shareBigInt
         }
 
-        let finalShare = (privKey - shareSum.modulus(modulusValueSigned)).modulus(modulusValueSigned)
+        let finalShare = (privKey - shareSum.modulus(TSSClient.modulusValueSigned)).modulus(TSSClient.modulusValueSigned)
         additiveShares.append(finalShare)
 
         let reduced = additiveShares.reduce(0) {
-            ($0 + $1).modulus(modulusValueSigned)
+            ($0 + $1).modulus(TSSClient.modulusValueSigned)
         }
         if reduced.serialize().toHexString() != privKey.serialize().toHexString() {
             throw TSSClientError.errorWithMessage("Additive shares don't sum up to private key")

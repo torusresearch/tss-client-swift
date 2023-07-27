@@ -4,21 +4,9 @@ import Network
 import SocketIO
 import SwiftKeccak
 
-let CURVE_N: String = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
-public var modulusValueUnsigned = BigUInt(CURVE_N, radix: 16)!
-public var modulusValueSigned = BigInt(CURVE_N, radix: 16)!
-
-struct Msg {
-    let session: String
-    let sender: Int
-    let recipient: Int
-    let msgType: String
-    let msgData: String
-}
-
 typealias Log = (String) -> Void
 
-struct Delimiters {
+internal struct Delimiters {
     static let Delimiter1 = "\u{001c}"
     static let Delimiter2 = "\u{0015}"
     static let Delimiter3 = "\u{0016}"
@@ -37,16 +25,20 @@ public enum TSSClientError: Error {
 }
 
 public class TSSClient {
+    private static let CURVE_N: String = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
+    public static let modulusValueUnsigned = BigUInt(CURVE_N, radix: 16)!
+    public static let modulusValueSigned = BigInt(CURVE_N, radix: 16)!
+    
     private(set) var session: String
     private(set) var parties: Int
     private var consumed: Bool = false
-    private(set) var signer: ThresholdSigner
-    private(set) var rng: ChaChaRng
-    private(set) var comm: DKLSComm
+    private var signer: ThresholdSigner
+    private var rng: ChaChaRng
+    private var comm: DKLSComm
     private(set) var index: Int32
-    var ready: Bool = false
+    private var ready: Bool = false
     var pubKey: String
-    var _sLessThanHalf = true
+    private var _sLessThanHalf = true
     public init(session: String, index: Int32, parties: [Int32], endpoints: [URL?], tssSocketEndpoints: [URL?], share: String, pubKey: String) throws
     {
         if parties.count != tssSocketEndpoints.count {
@@ -321,9 +313,9 @@ public class TSSClient {
         var recoveryParam = UInt8(decoded_r!.bytes.last! % 2)
 
         if _sLessThanHalf {
-            let halfOfSecp256k1n = modulusValueSigned / 2
+            let halfOfSecp256k1n = TSSClient.modulusValueSigned / 2
             if s > halfOfSecp256k1n {
-                s = modulusValueSigned - s
+                s = TSSClient.modulusValueSigned - s
                 recoveryParam = (recoveryParam + 1) % 2
             }
         }
@@ -338,7 +330,7 @@ public class TSSClient {
     }
 
     // returns a full signature using fragments and precompute
-    public func verifyWithPrecompute(message: String, hashOnly: Bool, precompute: Precompute, fragments: SignatureFragments, pubKey: String) throws -> String {
+    private func verifyWithPrecompute(message: String, hashOnly: Bool, precompute: Precompute, fragments: SignatureFragments, pubKey: String) throws -> String {
         return try Utilities.localVerify(message: message, hashOnly: hashOnly, precompute: precompute, signatureFragments: fragments, pubKey: pubKey)
     }
 

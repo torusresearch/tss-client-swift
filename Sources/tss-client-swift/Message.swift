@@ -1,5 +1,13 @@
 import Foundation
 
+internal struct Msg {
+    let session: String
+    let sender: Int
+    let recipient: Int
+    let msgType: String
+    let msgData: String
+}
+
 internal final class Message {
     private(set) var session: String
     private(set) var sender: UInt64

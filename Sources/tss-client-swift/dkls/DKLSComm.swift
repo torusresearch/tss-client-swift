@@ -3,7 +3,7 @@ import Foundation
     import lib
 #endif
 
-public final class DKLSComm {
+internal final class DKLSComm {
     private(set) var pointer: OpaquePointer?
 
     // Note:

@@ -3,6 +3,7 @@ import Foundation
 import SwiftKeccak
 
 public class TSSHelpers {
+    // singleton class
     private init() {}
 
     public static func hashMessage(message: String) -> String {
