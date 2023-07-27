@@ -58,7 +58,7 @@ internal final class TSSConnectionInfo {
             endpoints.removeAll(where: { $0.session == session })
             if let i = socketManagers.firstIndex(where: { $0.session == session }) {
                 if socketManagers[i].socketManager !== nil {
-                    socketManagers[i].socketManager!.defaultSocket.disconnect()
+                    socketManagers[i].socketManager!.disconnect()
                 }
                 socketManagers.remove(at: i)
             }
