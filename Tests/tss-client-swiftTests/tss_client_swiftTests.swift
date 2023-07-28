@@ -51,35 +51,6 @@ final class tss_client_swiftTests: XCTestCase {
         return sigs
     }
 
-    private func getLagrangeCoefficients(parties: [BigInt], party: BigInt) -> BigInt {
-        let partyIndex = party + 1
-        var upper = BigInt(1)
-        var lower = BigInt(1)
-        for i in 0 ..< parties.count {
-            let otherParty = parties[i]
-            let otherPartyIndex = otherParty + 1
-            if party != otherParty {
-                var otherPartyIndexNeg = otherPartyIndex
-                otherPartyIndexNeg.negate()
-                upper = (upper * otherPartyIndexNeg).modulus(TSSClient.modulusValueSigned)
-                let temp = (partyIndex - otherPartyIndex).modulus(TSSClient.modulusValueSigned)
-                lower = (lower * temp).modulus(TSSClient.modulusValueSigned)
-            }
-        }
-
-        let lowerInverse = lower.inverse(TSSClient.modulusValueSigned)
-        XCTAssert(lowerInverse != nil)
-        let delta = (upper * lowerInverse!).modulus(TSSClient.modulusValueSigned)
-        return delta
-    }
-
-    private func denormalizeShare(additiveShare: BigInt, parties: [BigInt], party: BigInt) -> BigInt {
-        let coeff = getLagrangeCoefficients(parties: parties, party: party)
-        let coeffInverse = coeff.inverse(TSSClient.modulusValueSigned)
-        XCTAssert(coeffInverse != nil)
-        return (additiveShare * coeffInverse!).modulus(TSSClient.modulusValueSigned)
-    }
-
     private func distributeShares(privKey: BigInt, parties: [Int32], endpoints: [String?], localClientIndex: Int32, session: String) throws {
         var additiveShares: [BigInt] = []
         var shareSum = BigInt.zero
@@ -175,6 +146,12 @@ final class tss_client_swiftTests: XCTestCase {
         return (endPoints, tssWSEndpoints, partyIndexes)
     }
 
+    private func denormalizeShare(additiveShare: BigInt, parties: [BigInt], party: BigInt) -> BigInt {
+        let coeff = try! TSSHelpers.getLagrangeCoefficients(parties: parties, party: party)
+        let coeffInverse = coeff.inverse(TSSClient.modulusValueSigned)
+        XCTAssert(coeffInverse != nil)
+        return (additiveShare * coeffInverse!).modulus(TSSClient.modulusValueSigned)
+    }
     func testExample() throws {
         let parties = 4
         let msg = "hello world"
