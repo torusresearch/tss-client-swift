@@ -1,6 +1,6 @@
 import Foundation
-#if canImport(lib)
-    import lib
+#if canImport(libdkls)
+    import libdkls
 #endif
 
 internal final class ChaChaRng {

@@ -21,16 +21,16 @@ let package = Package(
         .package(name: "SocketIO", url: "https://github.com/socketio/socket.io-client-swift", .upToNextMajor(from: "16.0.1"))
     ],
     targets: [
-        .binaryTarget(name: "libdkls",
+        .binaryTarget(name: "libdklsnative",
                       path: "Sources/libdkls/libdkls.xcframework"
         ),
-        .target(name: "lib",
-               dependencies: ["libdkls"],
+        .target(name: "libdkls",
+               dependencies: ["libdklsnative"],
                 path: "Sources/libdkls"
         ),
         .target(
             name: "tss-client-swift",
-            dependencies: ["BigInt", "CryptoSwift", "secp256k1", "SwiftKeccak", "SocketIO", "lib"]),
+            dependencies: ["BigInt", "CryptoSwift", "secp256k1", "SwiftKeccak", "SocketIO", "libdkls"]),
         .testTarget(
             name: "tss-client-swiftTests",
             dependencies: ["tss-client-swift", "BigInt"]),
