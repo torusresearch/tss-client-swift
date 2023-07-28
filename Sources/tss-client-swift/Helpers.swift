@@ -297,4 +297,8 @@ public class TSSHelpers {
         let delta = (upper * lowerInverse!).modulus(TSSClient.modulusValueSigned)
         return delta
     }
+    
+    public static func assembleFullSession(verifier: String, verifierId: String, tssTag: String, tssNonce: String, sessionNonce: String) -> String {
+        return verifier + Delimiters.Delimiter1 + verifierId + Delimiters.Delimiter2 + tssTag + Delimiters.Delimiter3 + tssNonce + Delimiters.Delimiter4 + sessionNonce
+    }
 }
