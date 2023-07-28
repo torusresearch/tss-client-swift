@@ -2,7 +2,7 @@ import BigInt
 import Foundation
 import Network
 import SocketIO
-import SwiftKeccak
+import CryptoKit
 
 typealias Log = (String) -> Void
 

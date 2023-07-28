@@ -1,6 +1,6 @@
 import BigInt
 import Foundation
-import SwiftKeccak
+import CryptoKit
 
 public class TSSHelpers {
     // singleton class
@@ -13,7 +13,8 @@ public class TSSHelpers {
     ///
     /// - Returns: `String`
     public static func hashMessage(message: String) -> String {
-        return keccak256(message).hexString
+        let hash = Data(message.utf8).sha3(.keccak256)
+        return hash.hexString
     }
 
     /// Converts a share to base64

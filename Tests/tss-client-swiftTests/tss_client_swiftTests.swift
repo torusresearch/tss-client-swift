@@ -1,5 +1,4 @@
 import BigInt
-import SwiftKeccak
 import tss_client_swift
 import XCTest
 

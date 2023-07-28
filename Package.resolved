@@ -45,15 +45,6 @@
           "revision": "df8d82047f6654d8e4b655d1b1525c64e1059d21",
           "version": "4.0.4"
         }
-      },
-      {
-        "package": "SwiftKeccak",
-        "repositoryURL": "https://github.com/bitflying/SwiftKeccak.git",
-        "state": {
-          "branch": null,
-          "revision": "5fc323d4b08a8c77cbb690505445b32a3b5a8aff",
-          "version": "0.1.2"
-        }
       }
     ]
   },
