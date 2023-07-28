@@ -168,10 +168,10 @@ public class TSSHelpers {
         }
     }
 
-    public static func getServerCoeffiecients(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt, serverIndex: BigInt) throws -> [String: String] {
+    public static func getServerCoefficients(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt) throws -> [String: String] {
         var serverCoeffs: [String: String] = [:]
         for i in participatingServerDKGIndexes {
-            let coefficient = try getDKLSCoefficient(isUser: false, participatingServerIndexes: participatingServerDKGIndexes, userTssIndex: userTssIndex, serverIndex: serverIndex)
+            let coefficient = try getDKLSCoefficient(isUser: false, participatingServerIndexes: participatingServerDKGIndexes, userTssIndex: userTssIndex, serverIndex: participatingServerDKGIndexes[Int(i)])
             serverCoeffs.updateValue(coefficient.serialize().suffix(32).hexString,forKey: String(i))
         }
         
