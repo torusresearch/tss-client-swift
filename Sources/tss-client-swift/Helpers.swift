@@ -167,12 +167,14 @@ public class TSSHelpers {
             throw TSSClientError("Problem with signature components")
         }
     }
-
+     
     public static func getServerCoefficients(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt) throws -> [String: String] {
         var serverCoeffs: [String: String] = [:]
-        for i in participatingServerDKGIndexes {
-            let coefficient = try getDKLSCoefficient(isUser: false, participatingServerIndexes: participatingServerDKGIndexes, userTssIndex: userTssIndex, serverIndex: participatingServerDKGIndexes[Int(i)])
-            serverCoeffs.updateValue(coefficient.serialize().suffix(32).hexString,forKey: String(i))
+        for i in 0..<participatingServerDKGIndexes.count
+        {
+            let coefficient = try getDKLSCoefficient(isUser: false, participatingServerIndexes: participatingServerDKGIndexes, userTssIndex: userTssIndex, serverIndex: participatingServerDKGIndexes[i])
+            serverCoeffs.updateValue(coefficient.serialize().suffix(32).hexString,forKey: participatingServerDKGIndexes[i].serialize().suffix(32).hexString)
+            
         }
         
         return serverCoeffs
