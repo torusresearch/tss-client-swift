@@ -276,7 +276,7 @@ public class TSSHelpers {
                let denormaliseCoeff = try TSSHelpers.getDenormalizedCoefficient(party: userPartyIndex, parties: parties)
                return (denormaliseCoeff * additiveCoeff).modulus(TSSClient.modulusValueSigned)
            } else {
-               let denormaliseCoeff = try! TSSHelpers.getDenormalizedCoefficient(party: serverPartyIndex, parties: parties)
+               let denormaliseCoeff = try TSSHelpers.getDenormalizedCoefficient(party: serverPartyIndex, parties: parties)
                return (denormaliseCoeff * additiveCoeff).modulus(TSSClient.modulusValueSigned)
            }
     }
