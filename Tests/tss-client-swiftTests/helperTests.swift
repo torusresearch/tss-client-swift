@@ -78,5 +78,26 @@ final class helpersTests: XCTestCase {
         res = str.removeLeadingZeros()
         XCTAssert("0" == res)
     }
+    
+    func testGetServerCoefficients() throws {
+        let coefficients_index3: [String: String] = [
+            "1": "1",
+            "2": "7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1",
+            "4": "dffffffffffffffffffffffffffffffee3590149d95f8c3447d812bb362f7919",
+        ]
+        
+        let coeffs_index3 = try TSSHelpers.getServerCoefficients(participatingServerDKGIndexes: [BigInt(1),BigInt(2),BigInt(4)], userTssIndex: BigInt(3))
+        
+        XCTAssert(coeffs_index3 == coefficients_index3)
+        
+        let coefficients_index2: [String: String] = [
+            "1": "7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a2",
+            "2": "1",
+            "3": "7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1",
+        ]
+        
+        let coeffs_index2 = try TSSHelpers.getServerCoefficients(participatingServerDKGIndexes: [BigInt(1),BigInt(2),BigInt(3)], userTssIndex: BigInt(2))
+        XCTAssert(coeffs_index2 == coefficients_index2)
+    }
 }
 
