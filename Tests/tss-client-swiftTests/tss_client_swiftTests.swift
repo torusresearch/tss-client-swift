@@ -129,7 +129,7 @@ final class tss_client_swiftTests: XCTestCase {
                     }
                     if let httpResponse = resp as? HTTPURLResponse {
                         if httpResponse.statusCode != 200 {
-                            print("Failed share route for" + url.absoluteString)
+                            print("Failed share route (\(httpResponse.statusCode))  for " + url.absoluteString)
                         }
                     }
                 }.resume()

@@ -214,7 +214,7 @@ public class TSSClient {
                     }
                     if let httpResponse = resp as? HTTPURLResponse {
                         if httpResponse.statusCode != 200 {
-                            print("Failed precompute route for" + url.absoluteString)
+                            print("Failed precompute route (\(httpResponse.statusCode)) for " + url.absoluteString)
                         }
                     }
                 }.resume()
@@ -313,7 +313,7 @@ public class TSSClient {
                     }
                     if let httpResponse = resp as? HTTPURLResponse {
                         if httpResponse.statusCode != 200 {
-                            print("Failed send route for" + url.absoluteString)
+                            print("Failed send route (\(httpResponse.statusCode)) for " + url.absoluteString)
                         }
                     }
 
@@ -407,7 +407,7 @@ public class TSSClient {
                     }
                     if let httpResponse = resp as? HTTPURLResponse {
                         if httpResponse.statusCode != 200 {
-                            print("Failed to cleanup for " + url.absoluteString)
+                            print("Failed to cleanup (\(httpResponse.statusCode)) for " + url.absoluteString)
                         }
                     }
                 }.resume()
