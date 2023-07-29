@@ -35,6 +35,7 @@ internal final class TSSSocket {
                 .reconnectWaitMax(1),
                 .path("/tss/socket.io"),
                 .connectParams(["sessionId": self.session.components(separatedBy: Delimiters.Delimiter4)[1]]),
+                .secure(true)
             ]
         }
 
