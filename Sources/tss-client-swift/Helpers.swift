@@ -180,56 +180,56 @@ public class TSSHelpers {
         return serverCoeffs
     }
     
-    
     public static func getFinalTssPublicKey(dkgPubKey: Data, userSharePubKey: Data, userTssIndex: BigInt) throws -> Data {
-        let serverLagrangeCoefficient = try TSSHelpers.getLagrangeCoefficients(parties: [BigInt(1), userTssIndex], party: 1)
-        let userLagrangeCoefficient = try TSSHelpers.getLagrangeCoefficients(parties: [BigInt(1), userTssIndex], party: userTssIndex)
-        
-        guard let parsedDkgPubKey = SECP256K1.parsePublicKey(serializedKey: dkgPubKey) else {
-            throw TSSClientError("dkgPublicKey is invalid")
-        }
-        
-        guard let parsedUserSharePubKey = SECP256K1.parsePublicKey(serializedKey: userSharePubKey) else {
-            throw TSSClientError("userSharePubKey is invalid")
-        }
-        
-        guard var serverTerm = SECP256K1.ecdh(pubKey: parsedDkgPubKey, privateKey: Data(serverLagrangeCoefficient.serialize().suffix(32))) else {
-            throw TSSClientError("Cannot calculate server term")
-        }
-        
-        guard var userTerm = SECP256K1.ecdh(pubKey: parsedUserSharePubKey, privateKey: Data(userLagrangeCoefficient.serialize().suffix(32)))  else {
-            throw TSSClientError("Cannot calculate user term")
-        }
-        
-        guard let serializedServerTerm = SECP256K1.serializePublicKey(publicKey: &serverTerm) else {
-            throw TSSClientError("Cannot serialize server term")
-        }
-        
-        guard let serializedUserTerm = SECP256K1.serializePublicKey(publicKey: &userTerm) else {
-            throw TSSClientError("Cannot serialize user term")
-        }
+            let serverLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: BigInt(1))
+            let userLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: userTssIndex)
+                
+            guard let serverTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: dkgPubKey),
+                  let userTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: userSharePubKey) else {
+                throw TSSClientError("InvalidPublicKey")
+            }
             
-        let keys = [serializedServerTerm, serializedUserTerm]
-        guard let combined = SECP256K1.combineSerializedPublicKeys(keys: keys) else {
-            throw TSSClientError("Cannot combine public keys")
-        }
-        
-        return combined
+            var serverTerm = serverTermUnprocessed
+            var userTerm = userTermUnprocessed
+
+            let serverLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(serverLagrangeCoeff.serialize())
+            let userLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(userLagrangeCoeff.serialize())
+
+            guard let serverTermProcessed = SECP256K1.ecdh(pubKey: serverTerm, privateKey: serverLagrangeCoeffData),
+                  let userTermProcessed = SECP256K1.ecdh(pubKey: userTerm, privateKey: userLagrangeCoeffData) else {
+                throw TSSClientError("Failed to process server term")
+            }
+
+            serverTerm = serverTermProcessed
+            userTerm = userTermProcessed
+
+            guard let serializedServerTerm = SECP256K1.serializePublicKey(publicKey: &serverTerm),
+                  let serializedUserTerm = SECP256K1.serializePublicKey(publicKey: &userTerm) else {
+                throw TSSClientError("Failed to process client term")
+            }
+
+            guard let combination = SECP256K1.combineSerializedPublicKeys(keys: [serializedServerTerm, serializedUserTerm]) else {
+                throw TSSClientError("Failed to combine keys")
+            }
+
+            return combination
     }
     
-    public static func getAdditiveCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTssIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
-        if (isUser) {
-            return try TSSHelpers.getLagrangeCoefficients(parties: [BigInt(1), userTssIndex], party: userTssIndex)
+
+    public static func getAdditiveCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTSSIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
+
+        if isUser {
+            return try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTSSIndex], party: userTSSIndex)
         }
-        
-        guard let serverIndex = serverIndex else {
-            throw TSSClientError("Server index has to be supplied if isUser is false")
+
+        if let serverIndex = serverIndex {
+            let serverLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: participatingServerIndexes, party: serverIndex)
+            let masterLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTSSIndex], party: BigInt(1))
+            let additiveLagrangeCoeff = (serverLagrangeCoeff * masterLagrangeCoeff).modulus(TSSClient.modulusValueSigned)
+            return additiveLagrangeCoeff
+        } else {
+            throw TSSClientError("isUser is false, serverIndex must be supplied")
         }
-        
-        let serverLagrangerCoefficient = try TSSHelpers.getLagrangeCoefficients(parties: participatingServerIndexes, party: serverIndex)
-        let masterLagrangeCoefficient = try TSSHelpers.getLagrangeCoefficients(parties: [BigInt(1), userTssIndex], party: BigInt(1))
-        let additiveLagrangeCoefficient = (serverLagrangerCoefficient * masterLagrangeCoefficient).modulus(TSSClient.modulusValueSigned)
-        return additiveLagrangeCoefficient
     }
 
     public static func getDenormalizedCoefficient(party: BigInt, parties: [BigInt]) throws -> BigInt {
@@ -237,7 +237,7 @@ public class TSSHelpers {
             throw TSSClientError("Party not found in parties")
         }
         
-        let denormalizedCoefficient = try TSSHelpers.getLagrangeCoefficients(parties: parties, party: party)
+        let denormalizedCoefficient = try TSSHelpers.getLagrangeCoefficient(parties: parties, party: party)
         guard let inverseDenormalizedCoefficient = denormalizedCoefficient.inverse(TSSClient.modulusValueSigned) else {
             throw TSSClientError("Cannot calculate inverse of denormalizedCoefficient")
         }
@@ -245,61 +245,64 @@ public class TSSHelpers {
         return inverseDenormalizedCoefficient.modulus(TSSClient.modulusValueSigned)
     }
     
-    public static func getDKLSCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTssIndex: BigInt, serverIndex: BigInt) throws -> BigInt {
+    public static func getDKLSCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTssIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
         
-        // defaults to ascending order
         let sortedServerIndexes = participatingServerIndexes.sorted()
-        for i in 0..<sortedServerIndexes.count {
-            if sortedServerIndexes[i] != participatingServerIndexes[i] {
-                throw TSSClientError("participatingServerIndexes must be sorted")
-            }
-        }
 
-        var parties: [BigInt] = []
-        var serverPartyIndex: BigInt = BigInt.zero;
-        for i in 0..<participatingServerIndexes.count {
-            let currentParty = i+1
-            parties.append(BigInt(currentParty))
-            if participatingServerIndexes[i] == serverIndex {
-                serverPartyIndex = BigInt(currentParty)
-            }
-        }
-        let userPartyIndex = BigInt(parties.count+1)
-        parties.append(userPartyIndex)
-        
-        if (isUser) {
-            let additiveCoefficient = try TSSHelpers.getAdditiveCoefficient(isUser: isUser,  participatingServerIndexes: participatingServerIndexes, userTssIndex: userTssIndex, serverIndex: serverIndex)
-            let denomalizedCoefficient = try TSSHelpers.getDenormalizedCoefficient(party: userPartyIndex, parties: parties)
-            return (denomalizedCoefficient * additiveCoefficient).modulus(TSSClient.modulusValueSigned)
-        }
-        
-        let additiveCoefficient = try TSSHelpers.getAdditiveCoefficient(isUser: isUser, participatingServerIndexes: participatingServerIndexes, userTssIndex: userTssIndex, serverIndex: serverIndex)
-        let denormalizedCoefficient = try TSSHelpers.getDenormalizedCoefficient(party: serverPartyIndex, parties: parties)
-        return (denormalizedCoefficient * additiveCoefficient).modulus(TSSClient.modulusValueSigned)
+           for i in 0..<sortedServerIndexes.count {
+               if sortedServerIndexes[i] != participatingServerIndexes[i] {
+                   throw TSSClientError("server indexes must be sorted")
+               }
+           }
+
+           var parties = [BigInt]()
+           var serverPartyIndex: BigInt = 0
+
+           for i in 0..<participatingServerIndexes.count {
+               let currentPartyIndex = BigInt(i + 1)
+               parties.append(currentPartyIndex)
+               if participatingServerIndexes[i] == serverIndex {
+                   serverPartyIndex = currentPartyIndex
+               }
+           }
+
+           let userPartyIndex = BigInt(parties.count + 1)
+           parties.append(userPartyIndex)
+
+        let additiveCoeff = try TSSHelpers.getAdditiveCoefficient(isUser: isUser, participatingServerIndexes: participatingServerIndexes, userTSSIndex: userTssIndex, serverIndex: serverIndex)
+
+           if isUser {
+               let denormaliseCoeff = try TSSHelpers.getDenormalizedCoefficient(party: userPartyIndex, parties: parties)
+               return (denormaliseCoeff * additiveCoeff).modulus(TSSClient.modulusValueSigned)
+           } else {
+               let denormaliseCoeff = try! TSSHelpers.getDenormalizedCoefficient(party: serverPartyIndex, parties: parties)
+               return (denormaliseCoeff * additiveCoeff).modulus(TSSClient.modulusValueSigned)
+           }
     }
     
-    public static func getLagrangeCoefficients(parties: [BigInt], party: BigInt) throws -> BigInt {
-        let partyIndex = party + 1
+    public static func getLagrangeCoefficient(parties: [BigInt], party: BigInt, _ _target: BigInt = BigInt(0)) throws -> BigInt {
+
+        let allIndexes: [BigInt] = parties
+        let myIndex: BigInt = party
+        let target: BigInt = _target
         var upper = BigInt(1)
         var lower = BigInt(1)
-        for i in 0 ..< parties.count {
-            let otherParty = parties[i]
-            let otherPartyIndex = otherParty + 1
-            if party != otherParty {
-                var otherPartyIndexNeg = otherPartyIndex
-                otherPartyIndexNeg.negate()
-                upper = (upper * otherPartyIndexNeg).modulus(TSSClient.modulusValueSigned)
-                let temp = (partyIndex - otherPartyIndex).modulus(TSSClient.modulusValueSigned)
-                lower = (lower * temp).modulus(TSSClient.modulusValueSigned)
+        
+        for j in 0..<allIndexes.count {
+            if myIndex != allIndexes[j] {
+                var tempUpper = target - allIndexes[j]
+                tempUpper = tempUpper.modulus(TSSClient.modulusValueSigned)
+                upper = (upper * tempUpper).modulus(TSSClient.modulusValueSigned)
+                var tempLower = myIndex - allIndexes[j]
+                tempLower = tempLower.modulus(TSSClient.modulusValueSigned)
+                lower = (lower * tempLower).modulus(TSSClient.modulusValueSigned)
             }
         }
-
-        let lowerInverse = lower.inverse(TSSClient.modulusValueSigned)
-        if lowerInverse == nil {
-            throw TSSClientError("No modular inverse for lower when calculating lagrange coefficients")
+        if let lower = lower.inverse(TSSClient.modulusValueSigned) {
+            return (upper * lower).modulus(TSSClient.modulusValueSigned)
+        } else {
+            throw TSSClientError("Could not calculate inverse of lower")
         }
-        let delta = (upper * lowerInverse!).modulus(TSSClient.modulusValueSigned)
-        return delta
     }
     
     public static func assembleFullSession(verifier: String, verifierId: String, tssTag: String, tssNonce: String, sessionNonce: String) -> String {
