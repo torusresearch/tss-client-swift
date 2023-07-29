@@ -173,7 +173,7 @@ public class TSSHelpers {
         for i in 0..<participatingServerDKGIndexes.count
         {
             let coefficient = try getDKLSCoefficient(isUser: false, participatingServerIndexes: participatingServerDKGIndexes, userTssIndex: userTssIndex, serverIndex: participatingServerDKGIndexes[i])
-            serverCoeffs.updateValue(coefficient.serialize().suffix(32).hexString,forKey: participatingServerDKGIndexes[i].serialize().suffix(32).hexString)
+            serverCoeffs.updateValue(coefficient.serialize().suffix(32).hexString,forKey: String(i))
             
         }
         
