@@ -56,5 +56,27 @@ final class helpersTests: XCTestCase {
         
         XCTAssertEqual(tssPub.toHexString(), "04dd1619c7e99eb665e37c74828762e6a677511d4c52656ddc6499a57d486bddb8c0dc63b229ec9a31f4216138c3fbb67ac2630831135aecbaf0aafa095e439c61")
     }
+    
+    func testRemoveZeroTest() throws{
+        var string = "000010"
+        var result = string.removeLeadingZeros()
+        XCTAssert("10" == result)
+        
+        var str = "10"
+        var res = str.removeLeadingZeros()
+        XCTAssert(str == res)
+        
+        str = "0100056"
+        res = str.removeLeadingZeros()
+        XCTAssert("100056" == res)
+        
+        str = ""
+        res = str.removeLeadingZeros()
+        XCTAssert("" == res)
+        
+        str = "000000"
+        res = str.removeLeadingZeros()
+        XCTAssert("0" == res)
+    }
 }
 
