@@ -91,7 +91,7 @@ public class TSSClient {
                     message = msg
                     found = true
                 }
-                if Date() > now.addingTimeInterval(15) { // 15 second wait max
+                if Date() > now.addingTimeInterval(80) { // 15 second wait max
                     print("Failed to receive message in reasonable time")
                     break
                 } else {

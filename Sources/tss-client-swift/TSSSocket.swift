@@ -24,6 +24,7 @@ internal final class TSSSocket {
                 .forceWebsockets(true),
                 .reconnectAttempts(3),
                 .reconnectWaitMax(1),
+                .path("/tss/socket.io"),
                 .connectParams(["sessionId": self.session.components(separatedBy: Delimiters.Delimiter4)[1]])]
         } else {
             config = [
