@@ -162,8 +162,10 @@ public class TSSClient {
             if i != index {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
                 if tsssocket!.socketManager !== nil {
-                    if // tsssocket!.socketManager!.defaultSocket.status != SocketIOStatus.connected &&
-                        tsssocket!.socketManager!.defaultSocket.sid != nil {
+                    if
+                        tsssocket!.socketManager!.defaultSocket.status == SocketIOStatus.connected &&
+                        tsssocket!.socketManager!.defaultSocket.sid != nil
+                    {
                     } else {
                         throw TSSClientError("socket not connected yet, party:" + String(i) + ", session:" + session)
                     }
