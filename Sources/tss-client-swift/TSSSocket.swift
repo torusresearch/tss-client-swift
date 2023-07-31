@@ -87,7 +87,7 @@ internal final class TSSSocket {
             let json = try! JSONSerialization.data(withJSONObject: data[0])
             let msg = try! JSONDecoder().decode(TssRecvMsg.self, from: json)
             MessageQueue.shared.addMessage(msg: Message(session: msg.session, sender: UInt64(exactly: msg.sender)!, recipient: UInt64(exactly: msg.recipient)!, msgType: msg.msg_type, msgData: msg.msg_data))
-            let tag = session.split(separator: "~")[1]
+            let tag = msg.msg_type.split(separator: "~")[1]
             print("dkls: Received message \(tag), sender: `\(msg.sender)`, receiver: `\(msg.recipient)`")
             if ack.expected {
                 ack.with(1)
