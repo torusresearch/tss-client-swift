@@ -29,7 +29,6 @@ final class helpersTests: XCTestCase {
     func testGetDKLSCoeff () throws {
         let result = try TSSHelpers.getDKLSCoefficient(isUser: true, participatingServerIndexes:  [BigInt(100), BigInt(200)], userTssIndex: BigInt(100), serverIndex: nil)
         let expected = "a57eb50295fad40a57eb50295fad40a4ac66b301bc4dfafaaa8d2b05b28fae1".addLeading0sForLength64()
-        print(expected)
         XCTAssertEqual(result.serialize().suffix(32).toHexString(), expected)
         
         let dklsCoeff = try TSSHelpers.getDKLSCoefficient(isUser: true, participatingServerIndexes: [BigInt(1), BigInt(4), BigInt(5)], userTssIndex: BigInt(3), serverIndex: nil)
@@ -58,8 +57,8 @@ final class helpersTests: XCTestCase {
     }
     
     func testRemoveZeroTest() throws{
-        var string = "000010"
-        var result = string.removeLeadingZeros()
+        let string = "000010"
+        let result = string.removeLeadingZeros()
         XCTAssert("10" == result)
         
         var str = "10"

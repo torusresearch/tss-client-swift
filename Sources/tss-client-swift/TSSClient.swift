@@ -122,6 +122,8 @@ public class TSSClient {
             Utilities.CStringFree(ptr: cast)
             do {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
+                let tag = session.split(separator: "~")
+                print("dkls: Received message \(tag), sender: `\(Int(index))`, receiver: `\(Int(recipient))`")
                 let msg = TssSendMsg(session: session, index: Int(index), recipient: Int(recipient), msg_type: msgType, msg_data: msgData)
                 if let tsssocket = tsssocket {
                     if tsssocket.socketManager != nil {
