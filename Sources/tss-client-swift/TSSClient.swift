@@ -165,6 +165,8 @@ public class TSSClient {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
                 if tsssocket!.socketManager !== nil {
                     if
+                        (!tsssocket!.socketManager!.engine!.polling) && // not in polling mode, initial connection before upgrading to websockets
+                        (!tsssocket!.socketManager!.engine!.probing) && // not currently checking if it can upgrade
                         (!tsssocket!.socketManager!.engine!.fastUpgrade) && // not currently upgrading to websocket
                         tsssocket!.socketManager!.defaultSocket.status == SocketIOStatus.connected && // is currently connected
                         tsssocket!.socketManager!.defaultSocket.sid != nil // has an assigned socket id
