@@ -82,10 +82,10 @@ public class TSSClient {
                 return (result as NSString).utf8String!
             }
             var found = false
-            let now = Date()
+//            let now = Date()
             var result = ""
-            let group = DispatchGroup()
-            group.enter()
+//            let group = DispatchGroup()
+//            group.enter()
             var message: Message?
 //            while !found {
                 if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
@@ -103,13 +103,15 @@ public class TSSClient {
 //                    }
 //                }
 //            }
-            group.leave()
+//            group.leave()
             if found {
                 print("received message \(msgType) from \(party)")
                 result = message!.msgData
                 MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
+            }else {
+                print("received message \(msgType) from \(party) NOT FOUND result \(result)")
+                
             }
-            print("received message \(msgType) from \(party) NOT FOUND result \(result)")
             return (result as NSString).utf8String
         }
 
