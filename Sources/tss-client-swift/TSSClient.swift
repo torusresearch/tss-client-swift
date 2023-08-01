@@ -92,7 +92,7 @@ public class TSSClient {
                     found = true
                 }
                 if Date() > now.addingTimeInterval(80) { // 15 second wait max
-                    print("Failed to receive message in reasonable time")
+                    print("Failed to receive message in reasonable time \(msgType) \(index)")
                     break
                 } else {
                     let counts = EventQueue.shared.countEvents(session: session)
