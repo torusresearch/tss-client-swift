@@ -109,7 +109,7 @@ public class TSSClient {
                 result = message!.msgData
                 MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
             }
-            print("received message \(msgType) from \(party) NOT FOUND")
+            print("received message \(msgType) from \(party) NOT FOUND result \(result)")
             return (result as NSString).utf8String
         }
 
