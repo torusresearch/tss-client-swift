@@ -75,7 +75,8 @@ public class TSSClient {
             Utilities.CStringFree(ptr: cast)
             cast = UnsafeMutablePointer(mutating: msgTypeCString)
             Utilities.CStringFree(ptr: cast)
-
+            
+            print("Try to read message \(msgType) from \(index)")
             if msgType == "ga1_worker_support" {
                 let result = "not supported"
                 return (result as NSString).utf8String!
@@ -111,7 +112,9 @@ public class TSSClient {
             return (result as NSString).utf8String
         }
 
-        let sendMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Bool)? = { sessionCString, index, recipient, msgTypeCString, msgDataCString in
+        let sendMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Bool)? = { sessionCString, index, recipient,
+            
+            msgTypeCString, msgDataCString in
             // index = sender
             let session = String(cString: sessionCString!)
             let msgType = String(cString: msgTypeCString!)
@@ -125,6 +128,8 @@ public class TSSClient {
             let group = DispatchGroup()
             group.enter()
             let tag = msgType.split(separator: "~")[1]
+            
+            print("Try to send message \(msgType) from \(index)")
             do {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
                 print("dkls: Sending message \(tag), sender: `\(Int(index))`, receiver: `\(Int(recipient))`")
