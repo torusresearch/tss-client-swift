@@ -93,6 +93,7 @@ public class TSSClient {
                 }
                 if Date() > now.addingTimeInterval(80) { // 15 second wait max
                     print("Failed to receive message in reasonable time \(msgType) \(index)")
+                    print( MessageQueue.shared.allMessages(session: session))
                     break
                 } else {
                     let counts = EventQueue.shared.countEvents(session: session)
@@ -102,6 +103,7 @@ public class TSSClient {
                 }
             }
             if found {
+                print("received message \(msgType) from \(index)")
                 result = message!.msgData
                 MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
             }
@@ -120,22 +122,26 @@ public class TSSClient {
             Utilities.CStringFree(ptr: cast)
             cast = UnsafeMutablePointer(mutating: msgDataCString)
             Utilities.CStringFree(ptr: cast)
+            let group = DispatchGroup()
+            group.enter()
+            let tag = msgType.split(separator: "~")[1]
             do {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
-                let tag = msgType.split(separator: "~")[1]
                 print("dkls: Sending message \(tag), sender: `\(Int(index))`, receiver: `\(Int(recipient))`")
                 let msg = TssSendMsg(session: session, index: Int(index), recipient: Int(recipient), msg_type: msgType, msg_data: msgData)
                 if let tsssocket = tsssocket {
                     if tsssocket.socketManager != nil {
                         print("socket send websocket:\(tsssocket.socketManager!.defaultSocket.sid!): \(index)->\(recipient), \(msgType)")
                         tsssocket.socketManager!.defaultSocket.emit("send_msg", msg)
+                        group.leave()
                         return true
                     }
                 }
-                return false
             } catch {
-                return false
+                print("dkls: Sending message Failed \(tag), sender: `\(Int(index))`, receiver: `\(Int(recipient))`")
             }
+            group.leave()
+            return false
         }
 
         comm = try DKLSComm(session: session, index: index, parties: Int32(parties.count), readMsgCallback: readMsg, sendMsgCallback: sendMsg)
