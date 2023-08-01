@@ -85,25 +85,25 @@ public class TSSClient {
             let now = Date()
             var result = ""
             let group = DispatchGroup()
+            group.enter()
             var message: Message?
-            while !found {
-                group.enter()
+//            while !found {
                 if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
                     message = msg
                     found = true
                 }
-                if Date() > now.addingTimeInterval(80) { // 15 second wait max
-                    print("Failed to receive message in reasonable time \(msgType) \(party)")
-                    print( MessageQueue.shared.allMessages(session: session))
-                    break
-                } else {
-                    let counts = EventQueue.shared.countEvents(session: session)
-                    if counts[EventType.PrecomputeError] ?? 0 > 0 {
-                        break
-                    }
-                }
-                group.leave()
-            }
+//                if Date() > now.addingTimeInterval(80) { // 15 second wait max
+//                    print("Failed to receive message in reasonable time \(msgType) \(party)")
+//                    print( MessageQueue.shared.allMessages(session: session))
+//                    break
+//                } else {
+//                    let counts = EventQueue.shared.countEvents(session: session)
+//                    if counts[EventType.PrecomputeError] ?? 0 > 0 {
+//                        break
+//                    }
+//                }
+//            }
+            group.leave()
             if found {
                 print("received message \(msgType) from \(party)")
                 result = message!.msgData
