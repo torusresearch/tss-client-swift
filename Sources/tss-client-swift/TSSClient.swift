@@ -76,7 +76,7 @@ public class TSSClient {
             cast = UnsafeMutablePointer(mutating: msgTypeCString)
             Utilities.CStringFree(ptr: cast)
             
-            print("Try to read message \(msgType) from \(index)")
+            print("Try to read message \(msgType) from \(party)")
             if msgType == "ga1_worker_support" {
                 let result = "not supported"
                 return (result as NSString).utf8String!
@@ -93,7 +93,7 @@ public class TSSClient {
                     found = true
                 }
                 if Date() > now.addingTimeInterval(80) { // 15 second wait max
-                    print("Failed to receive message in reasonable time \(msgType) \(index)")
+                    print("Failed to receive message in reasonable time \(msgType) \(party)")
                     print( MessageQueue.shared.allMessages(session: session))
                     break
                 } else {
@@ -104,7 +104,7 @@ public class TSSClient {
                 }
             }
             if found {
-                print("received message \(msgType) from \(index)")
+                print("received message \(msgType) from \(party)")
                 result = message!.msgData
                 MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
             }
@@ -129,7 +129,7 @@ public class TSSClient {
             group.enter()
             let tag = msgType.split(separator: "~")[1]
             
-            print("Try to send message \(msgType) from \(index)")
+            print("Try to send message \(msgType) from \(recipient)")
             do {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
                 print("dkls: Sending message \(tag), sender: `\(Int(index))`, receiver: `\(Int(recipient))`")
