@@ -67,8 +67,8 @@ public class TSSClient {
         }
 
         let readMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?) -> UnsafePointer<CChar>?)? = { sessionCString, index, party, msgTypeCString in
-            // index = recipient
-            // party = sender
+//             index = recipient
+//             party = sender
             let session = String(cString: sessionCString!)
             let msgType = String(cString: msgTypeCString!)
             var cast = UnsafeMutablePointer(mutating: sessionCString)
@@ -82,28 +82,28 @@ public class TSSClient {
                 return (result as NSString).utf8String!
             }
             var found = false
-//            let now = Date()
+            let now = Date()
             var result = ""
-//            let group = DispatchGroup()
-//            group.enter()
+            let group = DispatchGroup()
+            group.enter()
             var message: Message?
-//            while !found {
+            while !found {
                 if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
                     message = msg
                     found = true
                 }
-//                if Date() > now.addingTimeInterval(80) { // 15 second wait max
-//                    print("Failed to receive message in reasonable time \(msgType) \(party)")
-//                    print( MessageQueue.shared.allMessages(session: session))
-//                    break
-//                } else {
-//                    let counts = EventQueue.shared.countEvents(session: session)
-//                    if counts[EventType.PrecomputeError] ?? 0 > 0 {
-//                        break
-//                    }
-//                }
-//            }
-//            group.leave()
+                if Date() > now.addingTimeInterval(80) { // 15 second wait max
+                    print("Failed to receive message in reasonable time \(msgType) \(party)")
+                    print( MessageQueue.shared.allMessages(session: session))
+                    break
+                } else {
+                    let counts = EventQueue.shared.countEvents(session: session)
+                    if counts[EventType.PrecomputeError] ?? 0 > 0 {
+                        break
+                    }
+                }
+            }
+            group.leave()
             if found {
                 print("received message \(msgType) from \(party)")
                 result = message!.msgData
