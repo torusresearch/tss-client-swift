@@ -85,9 +85,9 @@ public class TSSClient {
             let now = Date()
             var result = ""
             let group = DispatchGroup()
-            group.enter()
             var message: Message?
             while !found {
+                group.enter()
                 if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
                     message = msg
                     found = true
@@ -102,13 +102,13 @@ public class TSSClient {
                         break
                     }
                 }
+                group.leave()
             }
             if found {
                 print("received message \(msgType) from \(party)")
                 result = message!.msgData
                 MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
             }
-            group.leave()
             return (result as NSString).utf8String
         }
 
@@ -129,10 +129,11 @@ public class TSSClient {
             group.enter()
             let tag = msgType.split(separator: "~")[1]
             
-            print("Try to send message \(msgType) from \(recipient)")
+            print("Try to send message \(msgType) to \(recipient)")
             do {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
                 print("dkls: Sending message \(tag), sender: `\(Int(index))`, receiver: `\(Int(recipient))`")
+                
                 let msg = TssSendMsg(session: session, index: Int(index), recipient: Int(recipient), msg_type: msgType, msg_data: msgData)
                 if let tsssocket = tsssocket {
                     if tsssocket.socketManager != nil {
