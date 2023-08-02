@@ -84,29 +84,29 @@ public class TSSClient {
             var found = false
             let now = Date()
             var result = ""
-            let group = DispatchGroup()
-            group.enter()
+//            let group = DispatchGroup()
+//            group.enter()
             var message: Message?
-            while !found {
+//            while !found {
                 if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
                     message = msg
                     found = true
                 }
-                if Date() > now.addingTimeInterval(80) { // 15 second wait max
-                    print("Failed to receive message in reasonable time")
-                    break
-                } else {
-                    let counts = EventQueue.shared.countEvents(session: session)
-                    if counts[EventType.PrecomputeError] ?? 0 > 0 {
-                        break
-                    }
-                }
-            }
+//                if Date() > now.addingTimeInterval(80) { // 15 second wait max
+//                    print("Failed to receive message in reasonable time")
+//                    break
+//                } else {
+//                    let counts = EventQueue.shared.countEvents(session: session)
+//                    if counts[EventType.PrecomputeError] ?? 0 > 0 {
+//                        break
+//                    }
+//                }
+//            }
             if found {
                 result = message!.msgData
                 MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
             }
-            group.leave()
+//            group.leave()
             return (result as NSString).utf8String
         }
 
