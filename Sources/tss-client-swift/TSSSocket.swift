@@ -90,7 +90,7 @@ internal final class TSSSocket {
             let tag = msg.msg_type.split(separator: "~")[1]
             print("dkls: Received message \(tag), sender: `\(msg.sender)`, receiver: `\(msg.recipient)`")
             if ack.expected {
-                ack.with(1)
+                ack.with()
             }
         })
         socket.connect()
