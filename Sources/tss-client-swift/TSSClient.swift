@@ -104,6 +104,7 @@ public class TSSClient {
 //                }
 //            }
             if found {
+                print("Try to read message FOUND \(msgType) from \(party)")
                 result = message!.msgData
                 MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
             }
