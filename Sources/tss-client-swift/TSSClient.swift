@@ -122,6 +122,7 @@ public class TSSClient {
             Utilities.CStringFree(ptr: cast)
             cast = UnsafeMutablePointer(mutating: msgDataCString)
             Utilities.CStringFree(ptr: cast)
+            print("Try to send message \(msgType) from \(recipient)")
             do {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
                 let tag = msgType.split(separator: "~")[1]
