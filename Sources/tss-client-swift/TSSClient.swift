@@ -67,6 +67,7 @@ public class TSSClient {
         }
 
         let readMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?) -> UnsafePointer<CChar>?)? = { sessionCString, index, party, msgTypeCString in
+            print("Try to read message")
             // index = recipient
             // party = sender
             let session = String(cString: sessionCString!)
