@@ -85,8 +85,8 @@ public class TSSClient {
             let now = Date()
             var result = ""
             var message: Message?
+            let group = DispatchGroup()
             while !found {
-                let group = DispatchGroup()
                 group.enter()
                 if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
                     message = msg
