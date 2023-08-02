@@ -75,7 +75,8 @@ public class TSSClient {
             Utilities.CStringFree(ptr: cast)
             cast = UnsafeMutablePointer(mutating: msgTypeCString)
             Utilities.CStringFree(ptr: cast)
-
+            
+            print("Try to read message \(msgType) from \(party)")
             if msgType == "ga1_worker_support" {
                 let result = "not supported"
                 return (result as NSString).utf8String!
