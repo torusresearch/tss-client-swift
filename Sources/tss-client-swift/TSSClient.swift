@@ -195,7 +195,7 @@ public class TSSClient {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue("x-web3-session-id", forHTTPHeaderField: try! TSSClient.sid(session: session))
+                request.addValue(try! TSSClient.sid(session: session), forHTTPHeaderField: "x-web3-session-id")
 
                 let endpoints: [TSSEndpoint] = try TSSConnectionInfo.shared.allEndpoints(session: session)
                 var endpointStrings: [String] = endpoints.map({ $0.url!.absoluteString })
@@ -301,7 +301,7 @@ public class TSSClient {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue("x-web3-session-id", forHTTPHeaderField: try! TSSClient.sid(session: session))
+                request.addValue(try! TSSClient.sid(session: session), forHTTPHeaderField: "x-web3-session-id")
                 let msg: [String: Any] = [
                     "session": session,
                     "sender": index,
@@ -401,7 +401,7 @@ public class TSSClient {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue("x-web3-session-id", forHTTPHeaderField: try! TSSClient.sid(session: session))
+                request.addValue(try! TSSClient.sid(session: session), forHTTPHeaderField: "x-web3-session-id")
                 let msg: [String: Any] = [
                     "session": session,
                     "signatures": signatures,

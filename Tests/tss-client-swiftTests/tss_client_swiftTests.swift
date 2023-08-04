@@ -113,7 +113,7 @@ final class tss_client_swiftTests: XCTestCase {
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue("x-web3-session-id", forHTTPHeaderField: try! TSSClient.sid(session: session))
+                request.addValue(try! TSSClient.sid(session: session), forHTTPHeaderField: "x-web3-session-id")
                 let msg: [String: Any] = [
                     "session": session,
                     "share": TSSHelpers.base64ToBase64url(base64: try TSSHelpers.base64Share(share: share)),
