@@ -16,9 +16,9 @@ internal struct Delimiters {
 public class TSSClient {
     private static let CURVE_N: String = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141"
     /// Modulus value of the secp256k1 curve, without sign
-    public static let modulusValueUnsigned = BigUInt(CURVE_N, radix: 16)!
+    public static let modulusValueUnsigned = BigUInt(CURVE_N, radix: 16) ?? BigUInt.zero
     /// Modulus value of the secp256k1 curve, with sign
-    public static let modulusValueSigned = BigInt(CURVE_N, radix: 16)!
+    public static let modulusValueSigned = BigInt(CURVE_N, radix: 16) ?? BigInt.zero
 
     private(set) var session: String
     private(set) var parties: Int
@@ -69,74 +69,80 @@ public class TSSClient {
         let readMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?) -> UnsafePointer<CChar>?)? = { sessionCString, index, party, msgTypeCString in
             // index = recipient
             // party = sender
-            let session = String(cString: sessionCString!)
-            let msgType = String(cString: msgTypeCString!)
-            var cast = UnsafeMutablePointer(mutating: sessionCString)
-            Utilities.CStringFree(ptr: cast)
-            cast = UnsafeMutablePointer(mutating: msgTypeCString)
-            Utilities.CStringFree(ptr: cast)
-
-            if msgType == "ga1_worker_support" {
-                let result = "not supported"
-                return (result as NSString).utf8String!
-            }
-            var found = false
-            let now = Date()
-            var result = ""
-            let group = DispatchGroup()
-            group.enter()
-            var message: Message?
-            while !found {
-                if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
-                    message = msg
-                    found = true
+            if let sessionCString = sessionCString, let msgTypeCString = msgTypeCString {
+                let session = String(cString: sessionCString)
+                let msgType = String(cString: msgTypeCString)
+                var cast = UnsafeMutablePointer(mutating: sessionCString)
+                Utilities.CStringFree(ptr: cast)
+                cast = UnsafeMutablePointer(mutating: msgTypeCString)
+                Utilities.CStringFree(ptr: cast)
+                
+                if msgType == "ga1_worker_support" {
+                    let result = "not supported"
+                    return (result as NSString).utf8String
                 }
-                if Date() > now.addingTimeInterval(80) { // 15 second wait max
-                    print("Failed to receive message in reasonable time")
-                    break
-                } else {
-                    let counts = EventQueue.shared.countEvents(session: session)
-                    if counts[EventType.PrecomputeError] ?? 0 > 0 {
-                        break
+                var found = false
+                let now = Date()
+                var result = ""
+                let group = DispatchGroup()
+                group.enter()
+                var message: Message?
+                while !found {
+                    if let msg = MessageQueue.shared.findMessage(session: session, sender: party, recipient: index, messageType: msgType) {
+                        message = msg
+                        found = true
                     }
-                    if counts[EventType.SocketDataError] ?? 0 > 0 {
+                    if Date() > now.addingTimeInterval(5) { // 5 second wait max
+                        print("Failed to receive message in reasonable time")
                         break
+                    } else {
+                        let counts = EventQueue.shared.countEvents(session: session)
+                        if counts[EventType.PrecomputeError] ?? 0 > 0 {
+                            break
+                        }
+                        if counts[EventType.SocketDataError] ?? 0 > 0 {
+                            break
+                        }
                     }
                 }
+                if found, let message = message {
+                    result = message.msgData
+                    MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
+                }
+                group.leave()
+                return (result as NSString).utf8String
             }
-            if found {
-                result = message!.msgData
-                MessageQueue.shared.removeMessage(session: session, sender: party, recipient: index, messageType: msgType)
-            }
-            group.leave()
-            return (result as NSString).utf8String
+            return ("" as NSString).utf8String
         }
 
         let sendMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Bool)? = { sessionCString, index, recipient, msgTypeCString, msgDataCString in
             // index = sender
-            let session = String(cString: sessionCString!)
-            let msgType = String(cString: msgTypeCString!)
-            let msgData = String(cString: msgDataCString!)
-            var cast = UnsafeMutablePointer(mutating: sessionCString)
-            Utilities.CStringFree(ptr: cast)
-            cast = UnsafeMutablePointer(mutating: msgTypeCString)
-            Utilities.CStringFree(ptr: cast)
-            cast = UnsafeMutablePointer(mutating: msgDataCString)
-            Utilities.CStringFree(ptr: cast)
-            do {
-                let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
-                let tag = msgType.split(separator: "~")[1]
-                print("dkls: Sending message \(tag), sender: `\(Int(index))`, receiver: `\(Int(recipient))`")
-                let msg = TssSendMsg(session: session, index: Int(index), recipient: Int(recipient), msg_type: msgType, msg_data: msgData)
-                if tsssocket.socketManager != nil {
-                    print("socket send websocket:\(tsssocket.socketManager!.defaultSocket.sid!): \(index)->\(recipient), \(msgType)")
-                    tsssocket.socketManager!.defaultSocket.emit("send_msg", msg)
-                    return true
+            if let sessionCString = sessionCString, let msgTypeCString = msgTypeCString, let msgDataCString = msgDataCString {
+                let session = String(cString: sessionCString)
+                let msgType = String(cString: msgTypeCString)
+                let msgData = String(cString: msgDataCString)
+                var cast = UnsafeMutablePointer(mutating: sessionCString)
+                Utilities.CStringFree(ptr: cast)
+                cast = UnsafeMutablePointer(mutating: msgTypeCString)
+                Utilities.CStringFree(ptr: cast)
+                cast = UnsafeMutablePointer(mutating: msgDataCString)
+                Utilities.CStringFree(ptr: cast)
+                do {
+                    let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(recipient))
+                    let tag = msgType.split(separator: "~")[1]
+                    print("dkls: Sending message \(tag), sender: `\(Int(index))`, receiver: `\(Int(recipient))`")
+                    let msg = TssSendMsg(session: session, index: Int(index), recipient: Int(recipient), msg_type: msgType, msg_data: msgData)
+                    if let socketManager = tsssocket.socketManager {
+                        print("socket send websocket:\(socketManager.defaultSocket.sid ?? ""): \(index)->\(recipient), \(msgType)")
+                        socketManager.defaultSocket.emit("send_msg", msg)
+                        return true
+                    }
+                    return false
+                } catch {
+                    return false
                 }
-                return false
-            } catch {
-                return false
             }
+            return false
         }
 
         comm = try DKLSComm(session: session, index: index, parties: Int32(parties.count), readMsgCallback: readMsg, sendMsgCallback: sendMsg)
@@ -164,14 +170,15 @@ public class TSSClient {
         for i in 0 ..< parties {
             if i != index {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
-                if tsssocket.socketManager !== nil {
+                if let socketManager = tsssocket.socketManager, let engine = socketManager.engine {
                     if
-                        (!tsssocket.socketManager!.engine!.polling) && // not in polling mode, initial connection before upgrading to websockets
-                        (!tsssocket.socketManager!.engine!.probing) && // not currently checking if it can upgrade
-                        (!tsssocket.socketManager!.engine!.fastUpgrade) && // not currently upgrading to websocket
-                        tsssocket.socketManager!.defaultSocket.status == SocketIOStatus.connected && // is currently connected
-                        tsssocket.socketManager!.defaultSocket.sid != nil // has an assigned socket id
+                        (!engine.polling) && // not in polling mode, initial connection before upgrading to websockets
+                        (!engine.probing) && // not currently checking if it can upgrade
+                        (!engine.fastUpgrade) && // not currently upgrading to websocket
+                        socketManager.defaultSocket.status == SocketIOStatus.connected && // is currently connected
+                        socketManager.defaultSocket.sid != nil // has an assigned socket id
                     {
+                        continue
                     } else {
                         throw TSSClientError("socket not connected yet, party:" + String(i) + ", session:" + session)
                     }
@@ -179,24 +186,25 @@ public class TSSClient {
             }
         }
 
-        var error = 0
         for i in 0 ..< parties {
             let party = Int32(i)
+            var error: TSSClientError?
             if party != index {
                 let (tssUrl, tssSocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(party))
-                let socketID = tssSocket.socketManager!.defaultSocket.sid!
+                let socketID = try tssSocket.socketManager?.defaultSocket.sid ?? { throw TSSClientError("Socket ID unavailable for party \(party)") }()
+                let baseUrl = try tssUrl.url?.absoluteString ?? { throw TSSClientError("Invalid TSS url for party \(party)") }()
                 let urlSession = URLSession.shared
-                let url = URL(string: tssUrl.url!.absoluteString + "/precompute")!
+                let url = try URL(string: baseUrl + "/precompute") ?? { throw TSSClientError("Invalid TSS url for party \(party)") }()
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue(try! TSSClient.sid(session: session), forHTTPHeaderField: "x-web3-session-id")
+                request.addValue(try TSSClient.sid(session: session), forHTTPHeaderField: "x-web3-session-id")
 
                 let endpoints: [TSSEndpoint] = try TSSConnectionInfo.shared.allEndpoints(session: session)
-                var endpointStrings: [String] = endpoints.map({ $0.url!.absoluteString })
+                var endpointStrings: [String] = endpoints.map({ $0.url?.absoluteString ?? "" })
                 endpointStrings.insert("websocket:" + socketID, at: Int(index))
 
                 let msg: [String: Any] = [
@@ -224,14 +232,14 @@ public class TSSClient {
                     if let httpResponse = resp as? HTTPURLResponse {
                         if httpResponse.statusCode != 200 {
                             print("Failed precompute route (\(httpResponse.statusCode)) for " + url.absoluteString)
-                            error = httpResponse.statusCode
+                            error = TSSClientError("Party \(i) responded with error code \(httpResponse.statusCode)")
                         }
                     }
                 }.resume()
                 sem.wait()
             }
-            if error != 0 {
-                throw TSSClientError("Party \(i) responded with error \(error)")
+            if let error = error {
+                throw error
             }
         }
 
@@ -283,7 +291,11 @@ public class TSSClient {
                 if TSSHelpers.hashMessage(message: original_message) != message {
                     throw TSSClientError("hash of original message does not match message")
                 }
-                signingMessage = Data(hexString: message)!.base64EncodedString()
+                if let data = Data(hexString: message) {
+                    signingMessage = data.base64EncodedString()
+                } else {
+                    throw TSSClientError("Message is not a hex string")
+                }
             } else {
                 throw TSSClientError("Original message has to be provided")
             }
@@ -293,17 +305,19 @@ public class TSSClient {
 
         var fragments: [String] = []
         for i in 0 ..< precomputesComplete {
+            var error: TSSClientError?
             if i != index {
                 let (tssConnection, _) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
                 let urlSession = URLSession.shared
-                let url = URL(string: tssConnection.url!.absoluteString + "/sign")!
+                let baseUrl = try tssConnection.url?.absoluteString ?? { throw TSSClientError("Invalid TSS url for party \(i)") }()
+                let url = try URL(string: baseUrl + "/sign") ?? { throw TSSClientError("Invalid TSS url for party \(i)") }()
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue(try! TSSClient.sid(session: session), forHTTPHeaderField: "x-web3-session-id")
+                request.addValue(try TSSClient.sid(session: session), forHTTPHeaderField: "x-web3-session-id")
                 let msg: [String: Any] = [
                     "session": session,
                     "sender": index,
@@ -326,18 +340,26 @@ public class TSSClient {
                     }
                     if let httpResponse = resp as? HTTPURLResponse {
                         if httpResponse.statusCode != 200 {
+                            error = TSSClientError("Party \(i) responded with error code \(httpResponse.statusCode)")
                             print("Failed send route (\(httpResponse.statusCode)) for " + url.absoluteString)
                         }
                     }
 
                     if let data = data {
-                        let sig = try! JSONDecoder().decode([String: String].self, from: data).first!.value
-                        fragments.append(sig)
+                        if let sig = try? JSONDecoder().decode([String: String].self, from: data).first
+                        {
+                            fragments.append(sig.value)
+                        } else {
+                            error = TSSClientError("Party \(i) response could not be decoded")
+                        }
                     } else {
-                        print("Party \(i) returned no signature fragment")
+                        error = TSSClientError("Party \(i) returned no signature fragment")
                     }
                 }.resume()
                 sem.wait()
+            }
+            if let error = error {
+                throw error
             }
         }
 
@@ -350,12 +372,13 @@ public class TSSClient {
         let signature = try verifyWithPrecompute(message: signingMessage, hashOnly: hashOnly, precompute: precompute, fragments: sigFrags, pubKey: pubKey)
 
         let precompute_r = try precompute.getR()
-        let decoded_r = Data(base64Encoded: precompute_r)
-        let decoded = Data(base64Encoded: signature)
-        let sighex = decoded!.toHexString()
-        let r = BigInt(sighex.prefix(64), radix: 16)!
-        var s = BigInt(sighex.suffix(from: sighex.index(sighex.startIndex, offsetBy: 64)), radix: 16)!
-        var recoveryParam = UInt8(decoded_r!.bytes.last! % 2)
+        let decoded_r = try Data(base64Encoded: precompute_r) ?? { throw TSSClientError("R from precompute could not be decoded") }()
+        let decoded = try Data(base64Encoded: signature) ?? { throw TSSClientError("Signature could not be decoded") }()
+        let sighex = decoded.toHexString()
+        let r = try BigInt(sighex.prefix(64), radix: 16) ?? { throw TSSClientError("R component for signature is not valid") }()
+        var s = try BigInt(sighex.suffix(from: sighex.index(sighex.startIndex, offsetBy: 64)), radix: 16) ?? { throw TSSClientError("S component for signature is not valid") }()
+        let v = try decoded_r.bytes.last  ?? { throw TSSClientError("V component for signature is not valid") }()
+        var recoveryParam = UInt8(v % 2)
 
         if _sLessThanHalf {
             let halfOfSecp256k1n = TSSClient.modulusValueSigned / 2
@@ -392,19 +415,20 @@ public class TSSClient {
         consumed = false
         ready = false
 
-        var error = 0
         for i in 0 ..< parties {
+            var error: TSSClientError?
             if i != index {
                 let (tssConnection, _) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
                 let urlSession = URLSession.shared
-                let url = URL(string: tssConnection.url!.absoluteString + "/cleanup")!
+                let baseUrl = try tssConnection.url?.absoluteString ?? { throw TSSClientError("Invalid TSS url for party \(i)") }()
+                let url = try URL(string: baseUrl + "/cleanup") ?? { throw TSSClientError("Invalid TSS url for party \(i)") }()
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
                 request.addValue("GET, POST", forHTTPHeaderField: "Access-Control-Allow-Methods")
                 request.addValue("Content-Type", forHTTPHeaderField: "Access-Control-Allow-Headers")
                 request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-                request.addValue(try! TSSClient.sid(session: session), forHTTPHeaderField: "x-web3-session-id")
+                request.addValue(try TSSClient.sid(session: session), forHTTPHeaderField: "x-web3-session-id")
                 let msg: [String: Any] = [
                     "session": session,
                     "signatures": signatures,
@@ -421,15 +445,15 @@ public class TSSClient {
                     }
                     if let httpResponse = resp as? HTTPURLResponse {
                         if httpResponse.statusCode != 200 {
+                            error = TSSClientError("Party \(i) responded with error code \(httpResponse.statusCode)")
                             print("Failed to cleanup (\(httpResponse.statusCode)) for " + url.absoluteString)
-                            error = httpResponse.statusCode
                         }
                     }
                 }.resume()
                 sem.wait()
             }
-            if error != 0 {
-                throw TSSClientError("Party \(i) responded with error \(error)")
+            if let error = error  {
+                throw error
             }
         }
     }
@@ -474,21 +498,20 @@ public class TSSClient {
     /// Checks if socket connections have been established and are ready to be used, for all parties, before precompute can be attemped
     ///
     /// - Returns: `Bool`
-    public func checkConnected() -> Bool {
+    public func checkConnected() throws -> Bool {
         var connections = 0
         var connectedParties: [Int32] = []
         for party_index in 0 ..< parties {
             let party = Int32(party_index)
             if party != index {
                 if !connectedParties.contains(party) {
-                    let (_, socketConnection) = try! TSSConnectionInfo.shared.lookupEndpoint(session: session, party: party)
-                    if socketConnection.socketManager == nil {
-                        continue
-                    }
-                    if socketConnection.socketManager!.status == .connected &&
-                        socketConnection.socketManager!.defaultSocket.status == .connected && socketConnection.socketManager!.defaultSocket.sid != nil {
-                        connections += 1
-                        connectedParties.append(party)
+                    let (_, socketConnection) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: party)
+                    if let socketManager = socketConnection.socketManager {
+                        if socketManager.status == .connected &&
+                            socketManager.defaultSocket.status == .connected && socketManager.defaultSocket.sid != nil {
+                            connections += 1
+                            connectedParties.append(party)
+                        }
                     }
                 }
             }
