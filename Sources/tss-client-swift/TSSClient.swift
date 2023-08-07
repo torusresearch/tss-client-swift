@@ -1,8 +1,8 @@
 import BigInt
+import CryptoKit
 import Foundation
 import Network
 import SocketIO
-import CryptoKit
 
 typealias Log = (String) -> Void
 
@@ -99,6 +99,9 @@ public class TSSClient {
                     if counts[EventType.PrecomputeError] ?? 0 > 0 {
                         break
                     }
+                    if counts[EventType.SocketDataError] ?? 0 > 0 {
+                        break
+                    }
                 }
             }
             if found {
@@ -125,12 +128,10 @@ public class TSSClient {
                 let tag = msgType.split(separator: "~")[1]
                 print("dkls: Sending message \(tag), sender: `\(Int(index))`, receiver: `\(Int(recipient))`")
                 let msg = TssSendMsg(session: session, index: Int(index), recipient: Int(recipient), msg_type: msgType, msg_data: msgData)
-                if let tsssocket = tsssocket {
-                    if tsssocket.socketManager != nil {
-                        print("socket send websocket:\(tsssocket.socketManager!.defaultSocket.sid!): \(index)->\(recipient), \(msgType)")
-                        tsssocket.socketManager!.defaultSocket.emit("send_msg", msg)
-                        return true
-                    }
+                if tsssocket.socketManager != nil {
+                    print("socket send websocket:\(tsssocket.socketManager!.defaultSocket.sid!): \(index)->\(recipient), \(msgType)")
+                    tsssocket.socketManager!.defaultSocket.emit("send_msg", msg)
+                    return true
                 }
                 return false
             } catch {
@@ -163,13 +164,13 @@ public class TSSClient {
         for i in 0 ..< parties {
             if i != index {
                 let (_, tsssocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
-                if tsssocket!.socketManager !== nil {
+                if tsssocket.socketManager !== nil {
                     if
-                        (!tsssocket!.socketManager!.engine!.polling) && // not in polling mode, initial connection before upgrading to websockets
-                        (!tsssocket!.socketManager!.engine!.probing) && // not currently checking if it can upgrade
-                        (!tsssocket!.socketManager!.engine!.fastUpgrade) && // not currently upgrading to websocket
-                        tsssocket!.socketManager!.defaultSocket.status == SocketIOStatus.connected && // is currently connected
-                        tsssocket!.socketManager!.defaultSocket.sid != nil // has an assigned socket id
+                        (!tsssocket.socketManager!.engine!.polling) && // not in polling mode, initial connection before upgrading to websockets
+                        (!tsssocket.socketManager!.engine!.probing) && // not currently checking if it can upgrade
+                        (!tsssocket.socketManager!.engine!.fastUpgrade) && // not currently upgrading to websocket
+                        tsssocket.socketManager!.defaultSocket.status == SocketIOStatus.connected && // is currently connected
+                        tsssocket.socketManager!.defaultSocket.sid != nil // has an assigned socket id
                     {
                     } else {
                         throw TSSClientError("socket not connected yet, party:" + String(i) + ", session:" + session)
@@ -178,14 +179,14 @@ public class TSSClient {
             }
         }
 
-        var error = 0;
+        var error = 0
         for i in 0 ..< parties {
             let party = Int32(i)
             if party != index {
                 let (tssUrl, tssSocket) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(party))
-                let socketID = tssSocket!.socketManager!.defaultSocket.sid!
+                let socketID = tssSocket.socketManager!.defaultSocket.sid!
                 let urlSession = URLSession.shared
-                let url = URL(string: tssUrl!.url!.absoluteString + "/precompute")!
+                let url = URL(string: tssUrl.url!.absoluteString + "/precompute")!
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
@@ -295,7 +296,7 @@ public class TSSClient {
             if i != index {
                 let (tssConnection, _) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
                 let urlSession = URLSession.shared
-                let url = URL(string: tssConnection!.url!.absoluteString + "/sign")!
+                let url = URL(string: tssConnection.url!.absoluteString + "/sign")!
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
@@ -396,7 +397,7 @@ public class TSSClient {
             if i != index {
                 let (tssConnection, _) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: Int32(i))
                 let urlSession = URLSession.shared
-                let url = URL(string: tssConnection!.url!.absoluteString + "/cleanup")!
+                let url = URL(string: tssConnection.url!.absoluteString + "/cleanup")!
                 var request = URLRequest(url: url)
                 request.httpMethod = "POST"
                 request.addValue("*", forHTTPHeaderField: "Access-Control-Allow-Origin")
@@ -459,7 +460,11 @@ public class TSSClient {
         if counts[EventType.PrecomputeError] ?? 0 > 0 {
             throw TSSClientError("Error occured during precompute")
         }
-
+        
+        if counts[EventType.SocketDataError] ?? 0 > 0 {
+            throw TSSClientError("Servers responding with invalid data")
+        }
+        
         if counts[EventType.PrecomputeComplete] ?? 0 == parties {
             return true
         }
@@ -477,11 +482,11 @@ public class TSSClient {
             if party != index {
                 if !connectedParties.contains(party) {
                     let (_, socketConnection) = try! TSSConnectionInfo.shared.lookupEndpoint(session: session, party: party)
-                    if socketConnection == nil || socketConnection!.socketManager == nil {
+                    if socketConnection.socketManager == nil {
                         continue
                     }
-                    if socketConnection!.socketManager!.status == .connected &&
-                        socketConnection!.socketManager!.defaultSocket.status == .connected && socketConnection!.socketManager!.defaultSocket.sid != nil {
+                    if socketConnection.socketManager!.status == .connected &&
+                        socketConnection.socketManager!.defaultSocket.status == .connected && socketConnection.socketManager!.defaultSocket.sid != nil {
                         connections += 1
                         connectedParties.append(party)
                     }

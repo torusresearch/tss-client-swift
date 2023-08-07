@@ -38,60 +38,82 @@ internal final class TSSSocket {
             ]
         }
 
-        socketManager = SocketManager(socketURL: url!,
-                                      config: config)
-
-        let socket = socketManager!.defaultSocket
-        socket.on(clientEvent: .error, callback: { _, _ in
-            print("socket error, party:" + String(party))
-        })
-        socket.on(clientEvent: .connect, callback: { _, _ in
-            print("connected, party:" + String(party))
-        })
-        socket.on(clientEvent: .disconnect, callback: { _, _ in
-            print("disconnected, party:" + String(party))
-        })
-        socket.on("precompute_complete", callback: { data, ack in
-            if session != self.session {
-                print("ignoring message for a different session...")
-                return
+        if let url = url {
+            socketManager = SocketManager(socketURL: url,
+                                          config: config)
+            if let socketManager = socketManager {
+                let socket = socketManager.defaultSocket
+                socket.on(clientEvent: .error, callback: { _, _ in
+                    print("socket error, party:" + String(party))
+                })
+                socket.on(clientEvent: .connect, callback: { _, _ in
+                    print("connected, party:" + String(party))
+                })
+                socket.on(clientEvent: .disconnect, callback: { _, _ in
+                    print("disconnected, party:" + String(party))
+                })
+                socket.on("precompute_complete", callback: { data, ack in
+                    if session != self.session {
+                        print("ignoring message for a different session...")
+                        return
+                    }
+                    
+                    if let json = try? JSONSerialization.data(withJSONObject: data[0]) {
+                        if let msg = try? JSONDecoder().decode(TssPrecomputeUpdate.self, from: json) {
+                            EventQueue.shared.addEvent(event: Event(message: String(msg.party), session: msg.session, party: Int32(msg.party), occurred: Date(), type: EventType.PrecomputeComplete))
+                        } else {
+                            EventQueue.shared.addEvent(event: Event(message: "Received json was not decodable", session: self.session, party: Int32(-1), occurred: Date(), type: EventType.SocketDataError))
+                        }
+                    } else {
+                        EventQueue.shared.addEvent(event: Event(message: "Server failed to respond with valid json", session: self.session, party: Int32(-1), occurred: Date(), type: EventType.SocketDataError))
+                    }
+                    if ack.expected {
+                        ack.with(1)
+                    }
+                })
+                socket.on("precompute_failed", callback: { data, ack in
+                    if session != self.session {
+                        print("ignoring message for a different session...")
+                        return
+                    }
+                    
+                    if let json = try? JSONSerialization.data(withJSONObject: data[0])
+                    {
+                        if let msg = try? JSONDecoder().decode(TssPrecomputeUpdate.self, from: json) {
+                            EventQueue.shared.addEvent(event: Event(message: String(msg.party), session: msg.session, party: Int32(msg.party), occurred: Date(), type: EventType.PrecomputeError))
+                        } else {
+                            EventQueue.shared.addEvent(event: Event(message: "Received json was not decodable", session: self.session, party: Int32(-1), occurred: Date(), type: EventType.SocketDataError))
+                        }
+                    } else {
+                        EventQueue.shared.addEvent(event: Event(message: "Server failed to respond with valid json", session: self.session, party: Int32(-1), occurred: Date(), type: EventType.SocketDataError))
+                    }
+                    if ack.expected {
+                        ack.with(1)
+                    }
+                })
+                socket.on("send", callback: { data, ack in
+                    if session != self.session {
+                        print("ignoring message for a different session...")
+                        return
+                    }
+                    
+                    if let json = try? JSONSerialization.data(withJSONObject: data[0]) {
+                        if let msg = try? JSONDecoder().decode(TssRecvMsg.self, from: json) {
+                            MessageQueue.shared.addMessage(msg: Message(session: msg.session, sender: UInt64(Int64(msg.sender)), recipient: UInt64(Int64(msg.recipient)), msgType: msg.msg_type, msgData: msg.msg_data))
+                            let tag = msg.msg_type.split(separator: "~")[1]
+                            print("dkls: Received message \(tag), sender: `\(msg.sender)`, receiver: `\(msg.recipient)`")
+                        } else {
+                            EventQueue.shared.addEvent(event: Event(message: "Server failed to respond with valid json", session: self.session, party: Int32(-1), occurred: Date(), type: EventType.SocketDataError))
+                        }
+                    } else {
+                        EventQueue.shared.addEvent(event: Event(message: "Server failed to respond with valid json", session: self.session, party: Int32(-1), occurred: Date(), type: EventType.SocketDataError))
+                    }
+                    if ack.expected {
+                        ack.with(1)
+                    }
+                })
+                socket.connect()
             }
-
-            let json = try! JSONSerialization.data(withJSONObject: data[0])
-            let msg = try! JSONDecoder().decode(TssPrecomputeUpdate.self, from: json)
-            EventQueue.shared.addEvent(event: Event(message: String(msg.party), session: msg.session, party: Int32(msg.party), occurred: Date(), type: EventType.PrecomputeComplete))
-            if ack.expected {
-                ack.with(1)
-            }
-        })
-        socket.on("precompute_failed", callback: { data, ack in
-            if session != self.session {
-                print("ignoring message for a different session...")
-                return
-            }
-
-            let json = try! JSONSerialization.data(withJSONObject: data[0])
-            let msg = try! JSONDecoder().decode(TssPrecomputeUpdate.self, from: json)
-            EventQueue.shared.addEvent(event: Event(message: String(msg.party), session: msg.session, party: Int32(msg.party), occurred: Date(), type: EventType.PrecomputeError))
-            if ack.expected {
-                ack.with(1)
-            }
-        })
-        socket.on("send", callback: { data, ack in
-            if session != self.session {
-                print("ignoring message for a different session...")
-                return
-            }
-
-            let json = try! JSONSerialization.data(withJSONObject: data[0])
-            let msg = try! JSONDecoder().decode(TssRecvMsg.self, from: json)
-            MessageQueue.shared.addMessage(msg: Message(session: msg.session, sender: UInt64(exactly: msg.sender)!, recipient: UInt64(exactly: msg.recipient)!, msgType: msg.msg_type, msgData: msg.msg_data))
-            let tag = msg.msg_type.split(separator: "~")[1]
-            print("dkls: Received message \(tag), sender: `\(msg.sender)`, receiver: `\(msg.recipient)`")
-            if ack.expected {
-                ack.with(1)
-            }
-        })
-        socket.connect()
+        }
     }
 }

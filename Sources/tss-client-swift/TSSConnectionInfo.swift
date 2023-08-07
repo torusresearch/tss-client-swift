@@ -17,8 +17,8 @@ internal final class TSSConnectionInfo {
         }
     }
 
-    public func lookupEndpoint(session: String, party: Int32) throws -> (TSSEndpoint?, TSSSocket?) {
-        queue.sync {
+    public func lookupEndpoint(session: String, party: Int32) throws -> (TSSEndpoint, TSSSocket) {
+        try queue.sync {
             var mgr: TSSSocket?
             if let mgrIndex = socketManagers.firstIndex(where: { $0.session == session && $0.party == party }) {
                 mgr = socketManagers[mgrIndex]
@@ -27,7 +27,12 @@ internal final class TSSConnectionInfo {
             if let endpointIndex = endpoints.firstIndex(where: { $0.session == session && $0.party == party }) {
                 endpoint = endpoints[endpointIndex]
             }
-            return (endpoint, mgr)
+            
+            if let endpoint = endpoint, let mgr = mgr
+            {
+                return (endpoint, mgr)
+            }
+            throw TSSClientError("Endpoint not found for party \(party)")
         }
     }
 
@@ -41,8 +46,8 @@ internal final class TSSConnectionInfo {
         queue.sync(flags: .barrier) {
             endpoints.removeAll(where: { $0.session == session && $0.party == party })
             if let i = socketManagers.firstIndex(where: { $0.session == session && $0.party == party }) {
-                if socketManagers[i].socketManager !== nil {
-                    socketManagers[i].socketManager!.defaultSocket.disconnect()
+                if let socketManager = socketManagers[i].socketManager {
+                    socketManager.defaultSocket.disconnect()
                 }
                 socketManagers.remove(at: i)
             }
@@ -56,8 +61,8 @@ internal final class TSSConnectionInfo {
         queue.sync(flags: .barrier) {
             endpoints.removeAll(where: { $0.session == session })
             if let i = socketManagers.firstIndex(where: { $0.session == session }) {
-                if socketManagers[i].socketManager !== nil {
-                    socketManagers[i].socketManager!.disconnect()
+                if let socketManager = socketManagers[i].socketManager {
+                    socketManager.disconnect()
                 }
                 socketManagers.remove(at: i)
             }

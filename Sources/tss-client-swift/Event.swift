@@ -1,7 +1,7 @@
 import Foundation
 
 internal enum EventType {
-    case PrecomputeComplete, PrecomputeError
+    case PrecomputeComplete, PrecomputeError, SocketDataError
 }
 
 internal final class Event {
