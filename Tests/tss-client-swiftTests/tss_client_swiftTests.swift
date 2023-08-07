@@ -173,7 +173,7 @@ final class tss_client_swiftTests: XCTestCase {
         return (endPoints, tssWSEndpoints, partyIndexes)
     }
 
-    func testExample() throws {
+    func testClientLocal() throws {
         let parties = 4
         let msg = "hello world"
         let msgHash = TSSHelpers.hashMessage(message: msg)

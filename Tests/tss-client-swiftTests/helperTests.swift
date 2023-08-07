@@ -1,6 +1,6 @@
 import XCTest
 import BigInt
-import tss_client_swift
+@testable import tss_client_swift
 
 
 final class helpersTests: XCTestCase {

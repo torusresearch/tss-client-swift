@@ -168,6 +168,15 @@ public class TSSHelpers {
         }
     }
     
+    /// Calculates server coefficients based on the distributed key generation indexes and the user tss index
+    ///
+    /// - Parameters:
+    ///   - patricipatingServerDKGIndexes: The array of indexes for the participating servers.
+    ///   - userTssIndex: The current tss index for the user
+    ///
+    /// - Returns: `[String: String]`
+    ///
+    /// - Throws: `TSSClientError`
     public static func getServerCoefficients(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt) throws -> [String: String] {
         var serverCoeffs: [String: String] = [:]
         for i in 0..<participatingServerDKGIndexes.count
@@ -181,6 +190,16 @@ public class TSSHelpers {
         return serverCoeffs
     }
     
+    /// Calculates the public key that will be used for TSS signing.
+    ///
+    /// - Parameters:
+    ///   - dkgPublicKey: The public key resulting from distributed key generation.
+    ///   - userSharePubKey: The public key for the current TSS share
+    ///   - userTssIndex: The current tss index for the user
+    ///
+    /// - Returns: `Data`
+    ///
+    /// - Throws: `TSSClientError`
     public static func getFinalTssPublicKey(dkgPubKey: Data, userSharePubKey: Data, userTssIndex: BigInt) throws -> Data {
             let serverLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: BigInt(1))
             let userLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: userTssIndex)
@@ -216,8 +235,7 @@ public class TSSHelpers {
             return combination
     }
     
-
-    public static func getAdditiveCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTSSIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
+    internal static func getAdditiveCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTSSIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
 
         if isUser {
             return try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTSSIndex], party: userTSSIndex)
@@ -233,7 +251,7 @@ public class TSSHelpers {
         }
     }
 
-    public static func getDenormalizedCoefficient(party: BigInt, parties: [BigInt]) throws -> BigInt {
+    internal static func getDenormalizedCoefficient(party: BigInt, parties: [BigInt]) throws -> BigInt {
         if parties.firstIndex(where: {$0 == party}) == nil {
             throw TSSClientError("Party not found in parties")
         }
@@ -246,7 +264,7 @@ public class TSSHelpers {
         return inverseDenormalizedCoefficient.modulus(TSSClient.modulusValueSigned)
     }
     
-    public static func getDKLSCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTssIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
+    internal static func getDKLSCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTssIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
         
         let sortedServerIndexes = participatingServerIndexes.sorted()
 
@@ -281,7 +299,7 @@ public class TSSHelpers {
            }
     }
     
-    public static func getLagrangeCoefficient(parties: [BigInt], party: BigInt, _ _target: BigInt = BigInt(0)) throws -> BigInt {
+    internal static func getLagrangeCoefficient(parties: [BigInt], party: BigInt, _ _target: BigInt = BigInt(0)) throws -> BigInt {
 
         let allIndexes: [BigInt] = parties
         let myIndex: BigInt = party
@@ -306,6 +324,16 @@ public class TSSHelpers {
         }
     }
     
+    /// Assembles the full session string from components for signing.
+    ///
+    /// - Parameters:
+    ///   - verifier: The name of the verifier.
+    ///   - verifierId: The current verifier id.
+    ///   - tssTag: The current tss tag.
+    ///   - tssNonce: The current tss nonce.
+    ///   - sessionNonce: The current session nonce.
+    ///
+    /// - Returns: `String`
     public static func assembleFullSession(verifier: String, verifierId: String, tssTag: String, tssNonce: String, sessionNonce: String) -> String {
         return verifier + Delimiters.Delimiter1 + verifierId + Delimiters.Delimiter2 + tssTag + Delimiters.Delimiter3 + tssNonce + Delimiters.Delimiter4 + sessionNonce
     }
