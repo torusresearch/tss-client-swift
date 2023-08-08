@@ -197,7 +197,7 @@ final class tss_client_swiftTests: XCTestCase {
         }
 
         let client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
-        while !client.checkConnected() {
+        while !(try client.checkConnected()) {
             // no-op
         }
         let precompute = try! client.precompute(serverCoeffs: coeffs, signatures: sigs)
