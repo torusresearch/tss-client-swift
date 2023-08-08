@@ -340,15 +340,15 @@ public class TSSHelpers {
     
     
     
-    /// generate required endpoint for tss Client
+    /// Generates endpoints for client based on supplied inputs.
     ///
     /// - Parameters:
-    ///   - parties: The name of the verifier.
-    ///   - clientIndex: The current verifier id.
-    ///   - nodeIndexes: The current tss tag.
-    ///   - urls: The current tss nonce.
+    ///   - parties: The number of parties.
+    ///   - clientIndex: The index of the client in the number of parties.
+    ///   - nodeIndexes: The participating server indexes.
+    ///   - urls: The collection of urls for the tss service, one for each external party.
     ///
-    /// - Returns: (`[String]` , `[String]` , `[Int]`)
+    /// - Returns: `( [String] , [String] , [Int], [Int] )`
     public static func generateEndpoints(parties: Int, clientIndex: Int, nodeIndexes: [Int?], urls: [String]) throws -> ([String?], [String?], partyIndexes: [Int], nodeIndexes: [Int]) {
         
         var endpoints: [String?] = []
@@ -362,12 +362,10 @@ public class TSSHelpers {
                 endpoints.append(nil)
                 tssWSEndpoints.append(nil)
             } else {
-                // nodeIndexes[i] ?  nodeIndexes[i] - 1 : i
                 var index = i
-                var currentIndex = i
-                if (i >= nodeIndexes.count) == false {
+                if !(i >= nodeIndexes.count) {
                     guard let currentIndex = nodeIndexes[i] else {
-                        throw TSSClientError("Invalid indexing in nodeIndexes")
+                        throw TSSClientError("Invalid index in nodeIndexes")
                     }
                     index = currentIndex - 1
                     serverIndexes.append(currentIndex)
