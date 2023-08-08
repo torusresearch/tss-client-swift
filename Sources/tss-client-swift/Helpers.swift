@@ -337,4 +337,48 @@ public class TSSHelpers {
     public static func assembleFullSession(verifier: String, verifierId: String, tssTag: String, tssNonce: String, sessionNonce: String) -> String {
         return verifier + Delimiters.Delimiter1 + verifierId + Delimiters.Delimiter2 + tssTag + Delimiters.Delimiter3 + tssNonce + Delimiters.Delimiter4 + sessionNonce
     }
+    
+    
+    
+    /// generate required endpoint for tss Client
+    ///
+    /// - Parameters:
+    ///   - parties: The name of the verifier.
+    ///   - clientIndex: The current verifier id.
+    ///   - nodeIndexes: The current tss tag.
+    ///   - urls: The current tss nonce.
+    ///
+    /// - Returns: (`[String]` , `[String]` , `[Int]`)
+    public static func generateEndpoints(parties: Int, clientIndex: Int, nodeIndexes: [Int?], urls: [String]) throws -> ([String?], [String?], partyIndexes: [Int], nodeIndexes: [Int]) {
+        
+        var endpoints: [String?] = []
+        var tssWSEndpoints: [String?] = []
+        var partyIndexes: [Int] = []
+        var serverIndexes: [Int] = []
+
+        for i in 0 ..< parties {
+            partyIndexes.append(i)
+            if i == clientIndex {
+                endpoints.append(nil)
+                tssWSEndpoints.append(nil)
+            } else {
+                // nodeIndexes[i] ?  nodeIndexes[i] - 1 : i
+                var index = i
+                var currentIndex = i
+                if (i >= nodeIndexes.count) == false {
+                    guard let currentIndex = nodeIndexes[i] else {
+                        throw TSSClientError("Invalid indexing in nodeIndexes")
+                    }
+                    index = currentIndex - 1
+                    serverIndexes.append(currentIndex)
+                } else {
+                    serverIndexes.append(index + 1)
+                }
+                endpoints.append(urls[index])
+                tssWSEndpoints.append(urls[index].replacingOccurrences(of: "/tss", with: ""))
+            }
+        }
+        return (endpoints, tssWSEndpoints, partyIndexes, serverIndexes)
+    }
+
 }
