@@ -348,7 +348,7 @@ public class TSSHelpers {
     ///   - nodeIndexes: The participating server indexes.
     ///   - urls: The collection of urls for the tss service, one for each external party.
     ///
-    /// - Returns: `( [String] , [String] , [Int], [Int] )`
+    /// - Returns: `( [String?] , [String?] , [Int], [Int] )`
     public static func generateEndpoints(parties: Int, clientIndex: Int, nodeIndexes: [Int?], urls: [String]) throws -> ([String?], [String?], partyIndexes: [Int], nodeIndexes: [Int]) {
         
         var endpoints: [String?] = []

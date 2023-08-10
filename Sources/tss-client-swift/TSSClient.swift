@@ -498,6 +498,8 @@ public class TSSClient {
     /// Checks if socket connections have been established and are ready to be used, for all parties, before precompute can be attemped
     ///
     /// - Returns: `Bool`
+    ///
+    /// - Throws: `TSSClientError`
     public func checkConnected() throws -> Bool {
         var connections = 0
         var connectedParties: [Int32] = []
