@@ -76,7 +76,7 @@ public class TSSClient {
                 Utilities.CStringFree(ptr: cast)
                 cast = UnsafeMutablePointer(mutating: msgTypeCString)
                 Utilities.CStringFree(ptr: cast)
-                
+
                 if msgType == "ga1_worker_support" {
                     let result = "not supported"
                     return (result as NSString).utf8String
@@ -377,7 +377,7 @@ public class TSSClient {
         let sighex = decoded.toHexString()
         let r = try BigInt(sighex.prefix(64), radix: 16) ?? { throw TSSClientError("R component for signature is not valid") }()
         var s = try BigInt(sighex.suffix(from: sighex.index(sighex.startIndex, offsetBy: 64)), radix: 16) ?? { throw TSSClientError("S component for signature is not valid") }()
-        let v = try decoded_r.bytes.last  ?? { throw TSSClientError("V component for signature is not valid") }()
+        let v = try decoded_r.bytes.last ?? { throw TSSClientError("V component for signature is not valid") }()
         var recoveryParam = UInt8(v % 2)
 
         if _sLessThanHalf {
@@ -452,7 +452,7 @@ public class TSSClient {
                 }.resume()
                 sem.wait()
             }
-            if let error = error  {
+            if let error = error {
                 throw error
             }
         }
@@ -478,52 +478,67 @@ public class TSSClient {
     ///
     /// - Returns: `Bool`
     ///
+    /// - Parameters:
+    ///   - timeout: The maximum number of seconds to wait, in seconds.
+    ///
     /// - Throws: `TSSClientError`
-    public func isReady() throws -> Bool {
-        let counts = EventQueue.shared.countEvents(session: session)
-        if counts[EventType.PrecomputeError] ?? 0 > 0 {
-            throw TSSClientError("Error occured during precompute")
+    public func isReady(timeout: Int = 5) throws -> Bool {
+        let now = Date()
+        var result = false
+        while Date() < now.addingTimeInterval(TimeInterval(timeout)) {
+            let counts = EventQueue.shared.countEvents(session: session)
+            if counts[EventType.PrecomputeError] ?? 0 > 0 {
+                throw TSSClientError("Error occured during precompute")
+            }
+
+            if counts[EventType.SocketDataError] ?? 0 > 0 {
+                throw TSSClientError("Servers responding with invalid data")
+            }
+
+            if counts[EventType.PrecomputeComplete] ?? 0 == parties {
+                result = true
+                break
+            }
         }
-        
-        if counts[EventType.SocketDataError] ?? 0 > 0 {
-            throw TSSClientError("Servers responding with invalid data")
-        }
-        
-        if counts[EventType.PrecomputeComplete] ?? 0 == parties {
-            return true
-        }
-        return false
+        return result
     }
 
     /// Checks if socket connections have been established and are ready to be used, for all parties, before precompute can be attemped
     ///
+    /// - Parameters:
+    ///   - timeout: The maximum number of seconds to wait, in seconds.
+    ///
     /// - Returns: `Bool`
     ///
     /// - Throws: `TSSClientError`
-    public func checkConnected() throws -> Bool {
+    public func checkConnected(timeout: Int = 5) throws -> Bool {
         var connections = 0
         var connectedParties: [Int32] = []
-        for party_index in 0 ..< parties {
-            let party = Int32(party_index)
-            if party != index {
-                if !connectedParties.contains(party) {
-                    let (_, socketConnection) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: party)
-                    if let socketManager = socketConnection.socketManager {
-                        if socketManager.status == .connected &&
-                            socketManager.defaultSocket.status == .connected && socketManager.defaultSocket.sid != nil {
-                            connections += 1
-                            connectedParties.append(party)
+        let now = Date()
+        var result = false
+        while Date() < now.addingTimeInterval(TimeInterval(timeout)) {
+            for party_index in 0 ..< parties {
+                let party = Int32(party_index)
+                if party != index {
+                    if !connectedParties.contains(party) {
+                        let (_, socketConnection) = try TSSConnectionInfo.shared.lookupEndpoint(session: session, party: party)
+                        if let socketManager = socketConnection.socketManager {
+                            if socketManager.status == .connected &&
+                                socketManager.defaultSocket.status == .connected && socketManager.defaultSocket.sid != nil {
+                                connections += 1
+                                connectedParties.append(party)
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if connections != (parties - 1) {
-            return false
+            if connections == (parties - 1) {
+                result = true
+                break
+            }
         }
-
-        return true
+        return result
     }
 
     deinit {
