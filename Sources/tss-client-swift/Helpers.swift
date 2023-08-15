@@ -1,6 +1,6 @@
 import BigInt
-import Foundation
 import CryptoKit
+import Foundation
 
 public class TSSHelpers {
     // singleton class
@@ -69,13 +69,19 @@ public class TSSHelpers {
     public static func recoverPublicKey(msgHash: String, s: BigInt, r: BigInt, v: UInt8) throws -> Data {
         if let secpSigMarshalled = SECP256K1.marshalSignature(v: v, r: r.serialize().suffix(32), s: s.serialize().suffix(32))
         {
-            if let pk = SECP256K1.recoverPublicKey(hash: Data(hex: msgHash), signature: secpSigMarshalled, compressed: false) {
-                return pk
+            let msg = Data(base64Encoded: msgHash)
+
+            if msg != nil {
+                if let pk = SECP256K1.recoverPublicKey(hash: msg!, signature: secpSigMarshalled, compressed: false) {
+                    return pk
+                } else {
+                    throw TSSClientError("Public key recover failed")
+                }
             } else {
-                throw TSSClientError("Public key recover failed")
+                throw TSSClientError("Problem with signature")
             }
         } else {
-            throw TSSClientError("Problem with signature")
+            throw TSSClientError("Invalid base64 encoded hash")
         }
     }
 
@@ -167,7 +173,7 @@ public class TSSHelpers {
             throw TSSClientError("Problem with signature components")
         }
     }
-    
+
     /// Calculates server coefficients based on the distributed key generation indexes and the user tss index
     ///
     /// - Parameters:
@@ -179,17 +185,15 @@ public class TSSHelpers {
     /// - Throws: `TSSClientError`
     public static func getServerCoefficients(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt) throws -> [String: String] {
         var serverCoeffs: [String: String] = [:]
-        for i in 0..<participatingServerDKGIndexes.count
-        {
+        for i in 0 ..< participatingServerDKGIndexes.count {
             let coefficient = try getDKLSCoefficient(isUser: false, participatingServerIndexes: participatingServerDKGIndexes, userTssIndex: userTssIndex, serverIndex: participatingServerDKGIndexes[i])
-            //values should never contain leading zeros
-            serverCoeffs.updateValue(coefficient.serialize().suffix(32).hexString.removeLeadingZeros() ,forKey: participatingServerDKGIndexes[i].serialize().suffix(32).hexString.removeLeadingZeros())
-            
+            // values should never contain leading zeros
+            serverCoeffs.updateValue(coefficient.serialize().suffix(32).hexString.removeLeadingZeros(), forKey: participatingServerDKGIndexes[i].serialize().suffix(32).hexString.removeLeadingZeros())
         }
-        
+
         return serverCoeffs
     }
-    
+
     /// Calculates the public key that will be used for TSS signing.
     ///
     /// - Parameters:
@@ -201,42 +205,41 @@ public class TSSHelpers {
     ///
     /// - Throws: `TSSClientError`
     public static func getFinalTssPublicKey(dkgPubKey: Data, userSharePubKey: Data, userTssIndex: BigInt) throws -> Data {
-            let serverLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: BigInt(1))
-            let userLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: userTssIndex)
-                
-            guard let serverTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: dkgPubKey),
-                  let userTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: userSharePubKey) else {
-                throw TSSClientError("InvalidPublicKey")
-            }
-            
-            var serverTerm = serverTermUnprocessed
-            var userTerm = userTermUnprocessed
+        let serverLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: BigInt(1))
+        let userLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: userTssIndex)
 
-            let serverLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(serverLagrangeCoeff.serialize())
-            let userLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(userLagrangeCoeff.serialize())
+        guard let serverTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: dkgPubKey),
+              let userTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: userSharePubKey) else {
+            throw TSSClientError("InvalidPublicKey")
+        }
 
-            guard let serverTermProcessed = SECP256K1.ecdh(pubKey: serverTerm, privateKey: serverLagrangeCoeffData),
-                  let userTermProcessed = SECP256K1.ecdh(pubKey: userTerm, privateKey: userLagrangeCoeffData) else {
-                throw TSSClientError("Failed to process server term")
-            }
+        var serverTerm = serverTermUnprocessed
+        var userTerm = userTermUnprocessed
 
-            serverTerm = serverTermProcessed
-            userTerm = userTermProcessed
+        let serverLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(serverLagrangeCoeff.serialize())
+        let userLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(userLagrangeCoeff.serialize())
 
-            guard let serializedServerTerm = SECP256K1.serializePublicKey(publicKey: &serverTerm),
-                  let serializedUserTerm = SECP256K1.serializePublicKey(publicKey: &userTerm) else {
-                throw TSSClientError("Failed to process client term")
-            }
+        guard let serverTermProcessed = SECP256K1.ecdh(pubKey: serverTerm, privateKey: serverLagrangeCoeffData),
+              let userTermProcessed = SECP256K1.ecdh(pubKey: userTerm, privateKey: userLagrangeCoeffData) else {
+            throw TSSClientError("Failed to process server term")
+        }
 
-            guard let combination = SECP256K1.combineSerializedPublicKeys(keys: [serializedServerTerm, serializedUserTerm]) else {
-                throw TSSClientError("Failed to combine keys")
-            }
+        serverTerm = serverTermProcessed
+        userTerm = userTermProcessed
 
-            return combination
+        guard let serializedServerTerm = SECP256K1.serializePublicKey(publicKey: &serverTerm),
+              let serializedUserTerm = SECP256K1.serializePublicKey(publicKey: &userTerm) else {
+            throw TSSClientError("Failed to process client term")
+        }
+
+        guard let combination = SECP256K1.combineSerializedPublicKeys(keys: [serializedServerTerm, serializedUserTerm]) else {
+            throw TSSClientError("Failed to combine keys")
+        }
+
+        return combination
     }
-    
-    internal static func getAdditiveCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTSSIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
 
+    internal static func getAdditiveCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTSSIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
         if isUser {
             return try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTSSIndex], party: userTSSIndex)
         }
@@ -252,62 +255,60 @@ public class TSSHelpers {
     }
 
     internal static func getDenormalizedCoefficient(party: BigInt, parties: [BigInt]) throws -> BigInt {
-        if parties.firstIndex(where: {$0 == party}) == nil {
+        if parties.firstIndex(where: { $0 == party }) == nil {
             throw TSSClientError("Party not found in parties")
         }
-        
+
         let denormalizedCoefficient = try TSSHelpers.getLagrangeCoefficient(parties: parties, party: party)
         guard let inverseDenormalizedCoefficient = denormalizedCoefficient.inverse(TSSClient.modulusValueSigned) else {
             throw TSSClientError("Cannot calculate inverse of denormalizedCoefficient")
         }
-        
+
         return inverseDenormalizedCoefficient.modulus(TSSClient.modulusValueSigned)
     }
-    
+
     internal static func getDKLSCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTssIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
-        
         let sortedServerIndexes = participatingServerIndexes.sorted()
 
-           for i in 0..<sortedServerIndexes.count {
-               if sortedServerIndexes[i] != participatingServerIndexes[i] {
-                   throw TSSClientError("server indexes must be sorted")
-               }
-           }
+        for i in 0 ..< sortedServerIndexes.count {
+            if sortedServerIndexes[i] != participatingServerIndexes[i] {
+                throw TSSClientError("server indexes must be sorted")
+            }
+        }
 
-           var parties = [BigInt]()
-           var serverPartyIndex: BigInt = 0
+        var parties = [BigInt]()
+        var serverPartyIndex: BigInt = 0
 
-           for i in 0..<participatingServerIndexes.count {
-               let currentPartyIndex = BigInt(i + 1)
-               parties.append(currentPartyIndex)
-               if participatingServerIndexes[i] == serverIndex {
-                   serverPartyIndex = currentPartyIndex
-               }
-           }
+        for i in 0 ..< participatingServerIndexes.count {
+            let currentPartyIndex = BigInt(i + 1)
+            parties.append(currentPartyIndex)
+            if participatingServerIndexes[i] == serverIndex {
+                serverPartyIndex = currentPartyIndex
+            }
+        }
 
-           let userPartyIndex = BigInt(parties.count + 1)
-           parties.append(userPartyIndex)
+        let userPartyIndex = BigInt(parties.count + 1)
+        parties.append(userPartyIndex)
 
         let additiveCoeff = try TSSHelpers.getAdditiveCoefficient(isUser: isUser, participatingServerIndexes: participatingServerIndexes, userTSSIndex: userTssIndex, serverIndex: serverIndex)
 
-           if isUser {
-               let denormaliseCoeff = try TSSHelpers.getDenormalizedCoefficient(party: userPartyIndex, parties: parties)
-               return (denormaliseCoeff * additiveCoeff).modulus(TSSClient.modulusValueSigned)
-           } else {
-               let denormaliseCoeff = try TSSHelpers.getDenormalizedCoefficient(party: serverPartyIndex, parties: parties)
-               return (denormaliseCoeff * additiveCoeff).modulus(TSSClient.modulusValueSigned)
-           }
+        if isUser {
+            let denormaliseCoeff = try TSSHelpers.getDenormalizedCoefficient(party: userPartyIndex, parties: parties)
+            return (denormaliseCoeff * additiveCoeff).modulus(TSSClient.modulusValueSigned)
+        } else {
+            let denormaliseCoeff = try TSSHelpers.getDenormalizedCoefficient(party: serverPartyIndex, parties: parties)
+            return (denormaliseCoeff * additiveCoeff).modulus(TSSClient.modulusValueSigned)
+        }
     }
-    
-    internal static func getLagrangeCoefficient(parties: [BigInt], party: BigInt, _ _target: BigInt = BigInt(0)) throws -> BigInt {
 
+    internal static func getLagrangeCoefficient(parties: [BigInt], party: BigInt, _ _target: BigInt = BigInt(0)) throws -> BigInt {
         let allIndexes: [BigInt] = parties
         let myIndex: BigInt = party
         let target: BigInt = _target
         var upper = BigInt(1)
         var lower = BigInt(1)
-        
-        for j in 0..<allIndexes.count {
+
+        for j in 0 ..< allIndexes.count {
             if myIndex != allIndexes[j] {
                 var tempUpper = target - allIndexes[j]
                 tempUpper = tempUpper.modulus(TSSClient.modulusValueSigned)
@@ -323,7 +324,7 @@ public class TSSHelpers {
             throw TSSClientError("Could not calculate inverse of lower")
         }
     }
-    
+
     /// Assembles the full session string from components for signing.
     ///
     /// - Parameters:
@@ -337,9 +338,7 @@ public class TSSHelpers {
     public static func assembleFullSession(verifier: String, verifierId: String, tssTag: String, tssNonce: String, sessionNonce: String) -> String {
         return verifier + Delimiters.Delimiter1 + verifierId + Delimiters.Delimiter2 + tssTag + Delimiters.Delimiter3 + tssNonce + Delimiters.Delimiter4 + sessionNonce
     }
-    
-    
-    
+
     /// Generates endpoints for client based on supplied inputs.
     ///
     /// - Parameters:
@@ -350,7 +349,6 @@ public class TSSHelpers {
     ///
     /// - Returns: `( [String?] , [String?] , [Int], [Int] )`
     public static func generateEndpoints(parties: Int, clientIndex: Int, nodeIndexes: [Int?], urls: [String]) throws -> ([String?], [String?], partyIndexes: [Int], nodeIndexes: [Int]) {
-        
         var endpoints: [String?] = []
         var tssWSEndpoints: [String?] = []
         var partyIndexes: [Int] = []
@@ -378,5 +376,4 @@ public class TSSHelpers {
         }
         return (endpoints, tssWSEndpoints, partyIndexes, serverIndexes)
     }
-
 }
