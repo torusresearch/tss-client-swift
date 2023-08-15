@@ -36,7 +36,9 @@ final class tss_client_swiftTests: XCTestCase {
         var sigs: [String] = []
         for item in privateKeys {
             let hash = TSSHelpers.hashMessage(message: token)
-            let (serializedNodeSig, _) = SECP256K1.signForRecovery(hash: Data(hex: hash), privateKey: Data(hex: item))
+            let data = hash.data(using: .utf8)!
+            let msgB64 = Data(base64Encoded: data)!
+            let (serializedNodeSig, _) = SECP256K1.signForRecovery(hash: msgB64, privateKey: Data(hex: item))
             let unmarshaled = SECP256K1.unmarshalSignature(signatureData: serializedNodeSig!)!
             let sig = unmarshaled.r.hexString + unmarshaled.s.hexString + String(format: "%02X", unmarshaled.v)
             let msg: [String: Any] = [
