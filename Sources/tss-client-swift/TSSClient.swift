@@ -284,23 +284,16 @@ public class TSSClient {
             throw TSSClientError("Insufficient Precomputes")
         }
 
-        var signingMessage = ""
+        let signingMessage = message
 
         if !hashOnly {
             if let original_message = original_message {
                 if TSSHelpers.hashMessage(message: original_message) != message {
                     throw TSSClientError("hash of original message does not match message")
                 }
-                if let data = Data(hexString: message) {
-                    signingMessage = data.base64EncodedString()
-                } else {
-                    throw TSSClientError("Message is not a hex string")
-                }
             } else {
                 throw TSSClientError("Original message has to be provided")
             }
-        } else {
-            signingMessage = message
         }
 
         var fragments: [String] = []

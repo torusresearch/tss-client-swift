@@ -14,7 +14,7 @@ public class TSSHelpers {
     /// - Returns: `String`
     public static func hashMessage(message: String) -> String {
         let hash = Data(message.utf8).sha3(.keccak256)
-        return hash.hexString
+        return hash.base64EncodedString()
     }
 
     /// Converts a share to base64
