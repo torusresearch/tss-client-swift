@@ -69,24 +69,18 @@ public class TSSHelpers {
     public static func recoverPublicKey(msgHash: String, s: BigInt, r: BigInt, v: UInt8) throws -> Data {
         if let secpSigMarshalled = SECP256K1.marshalSignature(v: v, r: r.serialize().suffix(32), s: s.serialize().suffix(32))
         {
-            let msgData = msgHash.data(using: .utf8)
-            if msgData != nil {
-                let msgB64 = Data(base64Encoded: msgData!)
-
-                if msgB64 != nil {
-                    if let pk = SECP256K1.recoverPublicKey(hash: msgB64!, signature: secpSigMarshalled, compressed: false) {
-                        return pk
-                    } else {
-                        throw TSSClientError("Public key recover failed")
-                    }
-                } else {
-                    throw TSSClientError("Problem with signature")
-                }
-            } else {
+            guard let msgData = msgHash.data(using: .utf8),
+                  let msgB64 = Data(base64Encoded: msgData)
+            else {
                 throw TSSClientError("Invalid base64 encoded hash")
             }
+            if let pk = SECP256K1.recoverPublicKey(hash: msgB64, signature: secpSigMarshalled, compressed: false) {
+                return pk
+            } else {
+                throw TSSClientError("Public key recover failed")
+            }
         } else {
-            throw TSSClientError("Invalid base64 encoded hash")
+            throw TSSClientError("Problem with signature")
         }
     }
 
