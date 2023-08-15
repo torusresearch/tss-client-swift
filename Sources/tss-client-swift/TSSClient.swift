@@ -286,7 +286,7 @@ public class TSSClient {
 
         var signingMessage = ""
 
-        if hashOnly {
+        if !hashOnly {
             if let original_message = original_message {
                 if TSSHelpers.hashMessage(message: original_message) != message {
                     throw TSSClientError("hash of original message does not match message")
