@@ -19,7 +19,6 @@ final class tss_client_swiftTests: XCTestCase {
         "5513438cd00c901ff362e25ae08aa723495bea89ab5a53ce165730bc1d9a0280",
     ]
 
-    var session = ""
     var share: BigInt = BigInt.zero
 
     private func getSignatures() throws -> [String] {
@@ -106,7 +105,6 @@ final class tss_client_swiftTests: XCTestCase {
             let share = shares[i]
             if Int32(i) == localClientIndex {
                 self.share = share
-                self.session = session
             } else {
                 let urlSession = URLSession.shared
                 let url = URL(string: endpoints[i]! + "/share")!
@@ -198,7 +196,7 @@ final class tss_client_swiftTests: XCTestCase {
             coeffs.updateValue(coeff, forKey: String(i))
         }
 
-        let client = try! TSSClient(session: self.session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
+        let client = try! TSSClient(session: session, index: clientIndex, parties: partyIndexes, endpoints: endpoints.map({ URL(string: $0 ?? "") }), tssSocketEndpoints: socketEndpoints.map({ URL(string: $0 ?? "") }), share: TSSHelpers.base64Share(share: share), pubKey: try TSSHelpers.base64PublicKey(pubKey: publicKey))
         XCTAssertTrue(try client.checkConnected())
         let precompute = try! client.precompute(serverCoeffs: coeffs, signatures: sigs)
         XCTAssertTrue(try client.isReady())
