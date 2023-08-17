@@ -199,7 +199,7 @@ public class TSSHelpers {
     ///   - patricipatingServerDKGIndexes: The array of indexes for the participating servers.
     ///   - userTssIndex: The current tss index for the user
     ///
-    /// - Returns: `[String: String]`
+    /// - Returns: `String`
     ///
     /// - Throws: `TSSClientError`
     public static func getClientCoefficients(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt) throws -> String {
