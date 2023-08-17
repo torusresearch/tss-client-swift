@@ -40,7 +40,7 @@ final class helpersTests: XCTestCase {
         XCTAssert(coeff2 == comp)
         
         // example related test
-        let coeff01 = try TSSHelpers.getDKLSCoefficient(isUser: false, participatingServerIndexes: [1, 2, 3], userTssIndex: BigInt(3), serverIndex: 1)
+        let coeff01 = try TSSHelpers.getDKLSCoefficient(isUser: false, participatingServerIndexes: [BigInt(1), BigInt(2), BigInt(3)], userTssIndex: BigInt(3), serverIndex: 1)
         let coeff02 = try TSSHelpers.getDKLSCoefficient(isUser: false, participatingServerIndexes: [1, 2, 3], userTssIndex: BigInt(3), serverIndex: 2)
         let coeff03 = try TSSHelpers.getDKLSCoefficient(isUser: false, participatingServerIndexes: [1, 2, 3], userTssIndex: BigInt(3), serverIndex: 3)
         XCTAssert(coeff01 == BigInt("00dffffffffffffffffffffffffffffffee3590149d95f8c3447d812bb362f791a", radix: 16))
@@ -51,6 +51,11 @@ final class helpersTests: XCTestCase {
         let userCoeff3 = try TSSHelpers.getDKLSCoefficient(isUser: true, participatingServerIndexes: [1, 2, 3], userTssIndex: BigInt(3), serverIndex: nil)
         XCTAssert(userCoeff2 == BigInt("1", radix: 16))
         XCTAssert(userCoeff3 == BigInt("007fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1", radix: 16))
+        
+        let userCoeff22 = try TSSHelpers.getClientCoefficients(participatingServerDKGIndexes: [BigInt(1), BigInt(2), BigInt(3)], userTssIndex: BigInt(2))
+        let userCoeff23 = try TSSHelpers.getClientCoefficients(participatingServerDKGIndexes: [BigInt(1), BigInt(2), BigInt(3)], userTssIndex: BigInt(3))
+        XCTAssert(userCoeff22.removeLeadingZeros() == "1")
+        XCTAssert(userCoeff23.removeLeadingZeros() == "7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1")
         
     }
     
