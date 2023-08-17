@@ -25,7 +25,7 @@ final class helpersTests: XCTestCase {
         let expected = "7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1".addLeading0sForLength64()
         XCTAssertEqual(result.serialize().suffix(32).toHexString(), expected)
     }
-    
+
     func testGetDKLSCoeff () throws {
         let result = try TSSHelpers.getDKLSCoefficient(isUser: true, participatingServerIndexes:  [BigInt(100), BigInt(200)], userTssIndex: BigInt(100), serverIndex: nil)
         let expected = "a57eb50295fad40a57eb50295fad40a4ac66b301bc4dfafaaa8d2b05b28fae1".addLeading0sForLength64()
@@ -38,6 +38,29 @@ final class helpersTests: XCTestCase {
         let coeff2 = try TSSHelpers.getDKLSCoefficient(isUser: false, participatingServerIndexes: [1, 2, 5], userTssIndex: BigInt(3), serverIndex: 2)
         let comp = BigInt("955555555555555555555555555555549790ab8690ea5d782fe561d2241fa611", radix: 16)
         XCTAssert(coeff2 == comp)
+        
+        // example related test
+        let coeff01 = try TSSHelpers.getDKLSCoefficient(isUser: false, participatingServerIndexes: [1, 2, 3], userTssIndex: BigInt(3), serverIndex: 1)
+        let coeff02 = try TSSHelpers.getDKLSCoefficient(isUser: false, participatingServerIndexes: [1, 2, 3], userTssIndex: BigInt(3), serverIndex: 2)
+        let coeff03 = try TSSHelpers.getDKLSCoefficient(isUser: false, participatingServerIndexes: [1, 2, 3], userTssIndex: BigInt(3), serverIndex: 3)
+        XCTAssert(coeff01 == BigInt("00dffffffffffffffffffffffffffffffee3590149d95f8c3447d812bb362f791a", radix: 16))
+        XCTAssert(coeff02 == BigInt("003fffffffffffffffffffffffffffffffaeabb739abd2280eeff497a3340d9051", radix: 16))
+        XCTAssert(coeff03 == BigInt("009fffffffffffffffffffffffffffffff34ad4a102d8d642557e37b180221e8c9", radix: 16))
+        
+        let userCoeff2 = try TSSHelpers.getDKLSCoefficient(isUser: true, participatingServerIndexes: [1, 2, 3], userTssIndex: BigInt(2), serverIndex: nil)
+        let userCoeff3 = try TSSHelpers.getDKLSCoefficient(isUser: true, participatingServerIndexes: [1, 2, 3], userTssIndex: BigInt(3), serverIndex: nil)
+        XCTAssert(userCoeff2 == BigInt("1", radix: 16))
+        XCTAssert(userCoeff3 == BigInt("007fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1", radix: 16))
+        
+    }
+    
+    func testDenormalizeShare () throws {
+        let share = BigUInt(Data(hex: "18db3574e4217154769ad9cd88900e7f1c198aa60a1379f3869ba8a7699e6b53"))
+        let denormalize2 = try TSSHelpers.denormalizeShare(participatingServerDKGIndexes: [BigInt(1), BigInt(2), BigInt(3) ], userTssIndex: BigInt(2), userTssShare: BigInt(sign: .plus, magnitude: share))
+        let denormalize3 = try TSSHelpers.denormalizeShare(participatingServerDKGIndexes: [BigInt(1), BigInt(2), BigInt(3) ], userTssIndex: BigInt(3), userTssShare: BigInt(sign: .plus, magnitude: share))
+
+        XCTAssert(denormalize2 == BigInt("18db3574e4217154769ad9cd88900e7f1c198aa60a1379f3869ba8a7699e6b53", radix: 16))
+        XCTAssert(denormalize3 == BigInt("008c6d9aba7210b8aa3b4d6ce6c448073eeb6433c65cae0d17a337039a1cea564a", radix: 16))
     }
 
     func testFinalGetTSSPubkey() throws{
