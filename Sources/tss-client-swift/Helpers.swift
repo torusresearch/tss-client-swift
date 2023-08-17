@@ -192,6 +192,37 @@ public class TSSHelpers {
 
         return serverCoeffs
     }
+    
+    /// Calculates client(user) coefficients based on the distributed key generation indexes and the user tss index
+    ///
+    /// - Parameters:
+    ///   - patricipatingServerDKGIndexes: The array of indexes for the participating servers.
+    ///   - userTssIndex: The current tss index for the user
+    ///
+    /// - Returns: `String`
+    ///
+    /// - Throws: `TSSClientError`
+    public static func getClientCoefficients(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt) throws -> String {
+        let coeff = try getDKLSCoefficient(isUser: true, participatingServerIndexes: participatingServerDKGIndexes, userTssIndex: userTssIndex, serverIndex: nil)
+
+        return coeff.magnitude.serialize().toHexString()
+    }
+    
+    /// Calculates client(user) denormalise Share based on the distributed key generation indexes and the user tss index
+    ///
+    /// - Parameters:
+    ///   - patricipatingServerDKGIndexes: The array of indexes for the participating servers.
+    ///   - userTssIndex: The current tss index for the user
+    ///   - userTssShare: The current tss share for the user
+    ///
+    /// - Returns: `BigInt`
+    ///
+    /// - Throws: `TSSClientError` 
+    public static func denormalizeShare(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt, userTssShare: BigInt) throws -> BigInt {
+        let coeff = try getDKLSCoefficient(isUser: true, participatingServerIndexes: participatingServerDKGIndexes, userTssIndex: userTssIndex, serverIndex: nil)
+        let denormalizeShare = (coeff  * userTssShare ).modulus(TSSClient.modulusValueSigned)
+        return denormalizeShare
+    }
 
     /// Calculates the public key that will be used for TSS signing.
     ///
