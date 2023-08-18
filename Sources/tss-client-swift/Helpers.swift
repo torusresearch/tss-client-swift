@@ -118,23 +118,27 @@ public class TSSHelpers {
     ///
     /// - Throws: `TSSClientError`
     public static func hexUncompressedPublicKey(pubKey: Data, return64Bytes: Bool) throws -> String {
-        if pubKey.bytes.count == 65 && return64Bytes {
-            if pubKey.bytes.first == 04 {
-                return Data(pubKey.bytes.dropFirst()).hexString
+        if pubKey.bytes.count == 65 {
+            if return64Bytes {
+                if pubKey.bytes.first == 04 {
+                    return Data(pubKey.bytes.dropFirst()).hexString
+                } else {
+                    throw TSSClientError("Invalid public key bytes")
+                }
             } else {
-                throw TSSClientError("Invalid public key bytes")
+                return Data(pubKey.bytes).hexString
             }
-        } else if !return64Bytes {
-            return Data(pubKey.bytes).hexString
         }
 
-        if pubKey.bytes.count == 65 && !return64Bytes {
-            return Data(pubKey.bytes).hexString
-        } else if return64Bytes { // first byte should be 04 prefix
-            let prefix: UInt8 = 4
-            var pk = Data(pubKey)
-            pk.insert(prefix, at: 0)
-            return pk.hexString
+        if pubKey.bytes.count == 64 {
+            if return64Bytes {
+                return Data(pubKey.bytes).hexString
+            } else { // first byte should be 04 prefix
+                let prefix: UInt8 = 4
+                var pk = Data(pubKey)
+                pk.insert(prefix, at: 0)
+                return pk.hexString
+            }
         }
 
         throw TSSClientError("Invalid public key bytes")
