@@ -128,9 +128,9 @@ public class TSSHelpers {
             return Data(pubKey.bytes).hexString
         }
 
-        if pubKey.bytes.count == 65 && !return64Bytes {
+        if pubKey.bytes.count == 64 && return64Bytes {
             return Data(pubKey.bytes).hexString
-        } else if return64Bytes { // first byte should be 04 prefix
+        } else if !return64Bytes { // first byte should be 04 prefix
             let prefix: UInt8 = 4
             var pk = Data(pubKey)
             pk.insert(prefix, at: 0)
