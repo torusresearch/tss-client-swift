@@ -125,7 +125,7 @@ public class TSSHelpers {
                 } else {
                     throw TSSClientError("Invalid public key bytes")
                 }
-            } else if !return64Bytes {
+            } else {
                 return Data(pubKey.bytes).hexString
             }
         }
@@ -133,7 +133,7 @@ public class TSSHelpers {
         if pubKey.bytes.count == 64 {
             if return64Bytes {
                 return Data(pubKey.bytes).hexString
-            } else if !return64Bytes { // first byte should be 04 prefix
+            } else { // first byte should be 04 prefix
                 let prefix: UInt8 = 4
                 var pk = Data(pubKey)
                 pk.insert(prefix, at: 0)
