@@ -1,6 +1,6 @@
 import Foundation
-#if canImport(libdkls)
-    import libdkls
+#if canImport(dkls)
+    import dkls
 #endif
 
 internal final class Utilities {

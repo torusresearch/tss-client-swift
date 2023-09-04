@@ -17,16 +17,16 @@ let package = Package(
         .package(url: "https://github.com/daltoniam/Starscream", .exactItem("4.0.4")),
     ],
     targets: [
-        .binaryTarget(name: "libdklsnative",
+        .binaryTarget(name: "libdkls",
                       path: "Sources/libdkls/libdkls.xcframework"
         ),
-        .target(name: "libdkls",
-               dependencies: ["libdklsnative"],
+        .target(name: "dkls",
+               dependencies: ["libdkls"],
                 path: "Sources/libdkls"
         ),
         .target(
             name: "tss-client-swift",
-            dependencies: ["BigInt", "CryptoSwift", "secp256k1", "Starscream", "SocketIO", "libdkls"]),
+            dependencies: ["BigInt", "CryptoSwift", "secp256k1", "Starscream", "SocketIO", "dkls"]),
         .testTarget(
             name: "tss-client-swiftTests",
             dependencies: ["tss-client-swift", "BigInt"]),
