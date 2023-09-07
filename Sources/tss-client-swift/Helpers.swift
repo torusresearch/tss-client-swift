@@ -219,13 +219,13 @@ public class TSSHelpers {
     ///   - userTssIndex: The current tss index for the user
     ///   - userTssShare: The current tss share for the user
     ///
-    /// - Returns: `BigInt`
+    /// - Returns: `String`
     ///
     /// - Throws: `TSSClientError` 
-    public static func denormalizeShare(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt, userTssShare: BigInt) throws -> BigInt {
+    public static func denormalizeShare(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt, userTssShare: BigInt) throws -> String {
         let coeff = try getDKLSCoefficient(isUser: true, participatingServerIndexes: participatingServerDKGIndexes, userTssIndex: userTssIndex, serverIndex: nil)
         let denormalizeShare = (coeff  * userTssShare ).modulus(TSSClient.modulusValueSigned)
-        return denormalizeShare
+        return denormalizeShare.magnitude.serialize().toHexString()
     }
 
     /// Calculates the public key that will be used for TSS signing.

@@ -64,8 +64,8 @@ final class helpersTests: XCTestCase {
         let denormalize2 = try TSSHelpers.denormalizeShare(participatingServerDKGIndexes: [BigInt(1), BigInt(2), BigInt(3) ], userTssIndex: BigInt(2), userTssShare: BigInt(sign: .plus, magnitude: share))
         let denormalize3 = try TSSHelpers.denormalizeShare(participatingServerDKGIndexes: [BigInt(1), BigInt(2), BigInt(3) ], userTssIndex: BigInt(3), userTssShare: BigInt(sign: .plus, magnitude: share))
 
-        XCTAssert(denormalize2 == BigInt("18db3574e4217154769ad9cd88900e7f1c198aa60a1379f3869ba8a7699e6b53", radix: 16))
-        XCTAssert(denormalize3 == BigInt("008c6d9aba7210b8aa3b4d6ce6c448073eeb6433c65cae0d17a337039a1cea564a", radix: 16))
+        XCTAssert(denormalize2 == "18db3574e4217154769ad9cd88900e7f1c198aa60a1379f3869ba8a7699e6b53")
+        XCTAssert(denormalize3 == "8c6d9aba7210b8aa3b4d6ce6c448073eeb6433c65cae0d17a337039a1cea564a")
     }
 
     func testFinalGetTSSPubkey() throws{
