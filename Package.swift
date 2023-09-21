@@ -12,7 +12,7 @@ let package = Package(
     dependencies: [
         .package(name: "BigInt", url: "https://github.com/attaswift/BigInt.git", from: "5.3.0"),
         .package(name: "CryptoSwift", url: "https://github.com/krzyzanowskim/CryptoSwift.git",from: "1.7.2"),
-        .package(name: "secp256k1", url: "https://github.com/GigaBitcoin/secp256k1.swift", .upToNextMajor(from: "0.12.2")),
+        .package(name: "secp256k1", url: "https://github.com/GigaBitcoin/secp256k1.swift", .exact("0.12.2")),
         .package(name: "SocketIO", url: "https://github.com/socketio/socket.io-client-swift", .upToNextMajor(from: "16.0.1")),
     ],
     targets: [
