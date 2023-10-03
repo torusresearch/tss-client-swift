@@ -66,7 +66,7 @@ public class TSSClient {
             }
         }
 
-        let readMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?) -> UnsafePointer<CChar>?)? = { sessionCString, index, party, msgTypeCString in
+        let readMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?, UnsafeRawPointer?) -> UnsafePointer<CChar>?)? = { sessionCString, index, party, msgTypeCString, obj_ref in
             // index = recipient
             // party = sender
             if let sessionCString = sessionCString, let msgTypeCString = msgTypeCString {
@@ -115,7 +115,7 @@ public class TSSClient {
             return ("" as NSString).utf8String
         }
 
-        let sendMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?, UnsafePointer<CChar>?) -> Bool)? = { sessionCString, index, recipient, msgTypeCString, msgDataCString in
+        let sendMsg: (@convention(c) (UnsafePointer<CChar>?, UInt64, UInt64, UnsafePointer<CChar>?, UnsafePointer<CChar>?, UnsafeRawPointer?) -> Bool)? = { sessionCString, index, recipient, msgTypeCString, msgDataCString, obj_ref in
             // index = sender
             if let sessionCString = sessionCString, let msgTypeCString = msgTypeCString, let msgDataCString = msgDataCString {
                 let session = String(cString: sessionCString)
