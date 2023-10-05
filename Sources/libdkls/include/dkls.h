@@ -30,9 +30,9 @@
 
         //MsgComm
         struct DKLSMsgComm* dkls_comm(int index,int parties,const char* session,
-        const char* (*read_msg_callback)(const char*,unsigned long long int,unsigned long long int,const char*),
-        bool (*send_msg_callback)(const char*,unsigned long long int,unsigned long long int,const char*,const char*), int* error_code);
-        void dkls_comm_free(struct DKLSMsgComm* comm);
+        const char* (*read_msg_callback)(const char*,unsigned long long int,unsigned long long int,const char*, const void*),
+        bool (*send_msg_callback)(const char*,unsigned long long int,unsigned long long int,const char*,const char*, const void*), const void* parent_instance_ref, int* error_code);
+        const void* dkls_comm_free(struct DKLSMsgComm* comm);
 
         //Random Generator
         struct ChaChaRng* random_generator(const char* state, int* error_code);
