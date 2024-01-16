@@ -45,7 +45,7 @@ public class TSSHelpers {
     ///   - pubKey: The public key to be checked against, 65 byte representation
     ///
     /// - Returns: `Bool`
-    public static func verifySignature(msgHash: Data, s: BigInt, r: BigInt, v: UInt8, pubKey: Data) -> Bool {
+    public static func verifySignature(msgHash: Data, s: Data, r: Data, v: UInt8, pubKey: Data) -> Bool {
         do {
             let pk = try TSSHelpers.recoverPublicKey(msgHash: msgHash, s: s, r: r, v: v)
             if pk == pubKey {
@@ -68,9 +68,9 @@ public class TSSHelpers {
     /// - Returns: `Data`
     ///
     /// - Throws: `TSSClientError`
-    public static func recoverPublicKey(msgHash: Data, s: BigInt, r: BigInt, v: UInt8) throws -> Data {
+    public static func recoverPublicKey(msgHash: Data, s: Data, r: Data, v: UInt8) throws -> Data {
         
-        let rSign = try curvelib.Secp256k1.RecoverableSignature.init(r: r.serialize(), s: s.serialize(), v: v)
+        let rSign = try curvelib.Secp256k1.RecoverableSignature.init(r: r, s: s, v: v)
         
         let rPKey = try curvelib.Secp256k1.recoverPublicKey(rSignature: rSign, message: msgHash)
         

@@ -212,9 +212,9 @@ final class tss_client_swiftTests: XCTestCase {
 
         let (s, r, v) = try! client.sign(message: msgHash.base64EncodedString(), hashOnly: true, original_message: msg, precompute: precompute, signatures: sigs)
         try! client.cleanup(signatures: sigs)
-        XCTAssert(TSSHelpers.verifySignature(msgHash: msgHash, s: s, r: r, v: v, pubKey: publicKey))
+        XCTAssert(TSSHelpers.verifySignature(msgHash: msgHash, s: s.serialize(), r: r.serialize(), v: v, pubKey: publicKey))
 
-        let pk = try! TSSHelpers.recoverPublicKey(msgHash: msgHash, s: s, r: r, v: v)
+        let pk = try! TSSHelpers.recoverPublicKey(msgHash: msgHash, s: s.magnitude.serialize(), r: r.magnitude.serialize(), v: v)
         _ = try! TSSHelpers.hexUncompressedPublicKey(pubKey: pk, return64Bytes: true)
         let pkHex65 = try! TSSHelpers.hexUncompressedPublicKey(pubKey: pk, return64Bytes: false)
         
