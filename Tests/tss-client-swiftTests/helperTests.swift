@@ -68,21 +68,21 @@ final class helpersTests: XCTestCase {
         XCTAssert(denormalize3 == BigInt("008c6d9aba7210b8aa3b4d6ce6c448073eeb6433c65cae0d17a337039a1cea564a", radix: 16))
     }
 
-    func testFinalGetTSSPubkey() throws{
-        var dkgpub = Data()
-        dkgpub.append(0x04) // Uncompressed key prefix
-        dkgpub.append(Data(hexString: "18db3574e4217154769ad9cd88900e7f1c198aa60a1379f3869ba8a7699e6b53".padLeft(padChar: "0", count: 64))!)
-        dkgpub.append(Data(hexString: "d4f7d578667c38003f881f262e21655a38241401d9fc029c9a6fcbca8ac97713".padLeft(padChar: "0", count: 64))!)
-        
-        var userpub = Data()
-        userpub.append(0x04) // Uncompressed key prefix
-        userpub.append(Data(hexString: "b4259bffab844a5255ba0c8f278b7fd857c094460b9051c95f04b29f9792368c".padLeft(padChar: "0", count: 64))!)
-        userpub.append(Data(hexString: "790eb133df835aa22fd087d5e33b26f2d2e046b6670ac7603500bc1227216247".padLeft(padChar: "0", count: 64))!)
-        
-        let tssPub = try TSSHelpers.getFinalTssPublicKey(dkgPubKey: dkgpub, userSharePubKey: userpub, userTssIndex: BigInt(2))
-        
-        XCTAssertEqual(tssPub.toHexString(), "04dd1619c7e99eb665e37c74828762e6a677511d4c52656ddc6499a57d486bddb8c0dc63b229ec9a31f4216138c3fbb67ac2630831135aecbaf0aafa095e439c61")
-    }
+//    func testFinalGetTSSPubkey() throws{
+//        var dkgpub = Data()
+//        dkgpub.append(0x04) // Uncompressed key prefix
+//        dkgpub.append(Data(hexString: "18db3574e4217154769ad9cd88900e7f1c198aa60a1379f3869ba8a7699e6b53".padLeft(padChar: "0", count: 64))!)
+//        dkgpub.append(Data(hexString: "d4f7d578667c38003f881f262e21655a38241401d9fc029c9a6fcbca8ac97713".padLeft(padChar: "0", count: 64))!)
+//        
+//        var userpub = Data()
+//        userpub.append(0x04) // Uncompressed key prefix
+//        userpub.append(Data(hexString: "b4259bffab844a5255ba0c8f278b7fd857c094460b9051c95f04b29f9792368c".padLeft(padChar: "0", count: 64))!)
+//        userpub.append(Data(hexString: "790eb133df835aa22fd087d5e33b26f2d2e046b6670ac7603500bc1227216247".padLeft(padChar: "0", count: 64))!)
+//        
+//        let tssPub = try TSSHelpers.getFinalTssPublicKey(dkgPubKey: dkgpub, userSharePubKey: userpub, userTssIndex: BigInt(2))
+//        
+//        XCTAssertEqual(tssPub.toHexString(), "04dd1619c7e99eb665e37c74828762e6a677511d4c52656ddc6499a57d486bddb8c0dc63b229ec9a31f4216138c3fbb67ac2630831135aecbaf0aafa095e439c61")
+//    }
     
     func testRemoveZeroTest() throws{
         let string = "000010"

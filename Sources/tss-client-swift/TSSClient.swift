@@ -288,7 +288,7 @@ public class TSSClient {
 
         if !hashOnly {
             if let original_message = original_message {
-                if TSSHelpers.hashMessage(message: original_message) != message {
+                if TSSHelpers.hashMessage(message: original_message).hexString != message {
                     throw TSSClientError("hash of original message does not match message")
                 }
             } else {

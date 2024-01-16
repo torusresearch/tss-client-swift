@@ -2,6 +2,8 @@ import BigInt
 import CryptoKit
 import Foundation
 
+import curvelib
+
 public class TSSHelpers {
     // singleton class
     private init() {}
@@ -12,9 +14,9 @@ public class TSSHelpers {
     ///   - message: The message to be hashed.
     ///
     /// - Returns: `String`
-    public static func hashMessage(message: String) -> String {
+    public static func hashMessage(message: String) -> Data {
         let hash = Data(message.utf8).sha3(.keccak256)
-        return hash.base64EncodedString()
+        return hash
     }
 
     /// Converts a share to base64
@@ -43,7 +45,7 @@ public class TSSHelpers {
     ///   - pubKey: The public key to be checked against, 65 byte representation
     ///
     /// - Returns: `Bool`
-    public static func verifySignature(msgHash: String, s: BigInt, r: BigInt, v: UInt8, pubKey: Data) -> Bool {
+    public static func verifySignature(msgHash: Data, s: BigInt, r: BigInt, v: UInt8, pubKey: Data) -> Bool {
         do {
             let pk = try TSSHelpers.recoverPublicKey(msgHash: msgHash, s: s, r: r, v: v)
             if pk == pubKey {
@@ -66,22 +68,14 @@ public class TSSHelpers {
     /// - Returns: `Data`
     ///
     /// - Throws: `TSSClientError`
-    public static func recoverPublicKey(msgHash: String, s: BigInt, r: BigInt, v: UInt8) throws -> Data {
-        if let secpSigMarshalled = SECP256K1.marshalSignature(v: v, r: r.serialize().suffix(32), s: s.serialize().suffix(32))
-        {
-            guard let msgData = msgHash.data(using: .utf8),
-                  let msgB64 = Data(base64Encoded: msgData)
-            else {
-                throw TSSClientError("Invalid base64 encoded hash")
-            }
-            if let pk = SECP256K1.recoverPublicKey(hash: msgB64, signature: secpSigMarshalled, compressed: false) {
-                return pk
-            } else {
-                throw TSSClientError("Public key recover failed")
-            }
-        } else {
-            throw TSSClientError("Problem with signature")
-        }
+    public static func recoverPublicKey(msgHash: Data, s: BigInt, r: BigInt, v: UInt8) throws -> Data {
+        
+        let rSign = try curvelib.Secp256k1.RecoverableSignature.init(r: r.serialize(), s: s.serialize(), v: v)
+        
+        let rPKey = try curvelib.Secp256k1.recoverPublicKey(rSignature: rSign, message: msgHash)
+        
+        return try Data(hex: rPKey.getRaw())
+
     }
 
     /// Converts a public key to base64.
@@ -169,12 +163,8 @@ public class TSSHelpers {
     ///
     /// - Throws: `TSSClientError`
     public static func hexSignature(s: BigInt, r: BigInt, v: UInt8) throws -> String {
-        if let secpSigMarshalled = SECP256K1.marshalSignature(v: v, r: r.serialize().suffix(32), s: s.serialize().suffix(32))
-        {
-            return secpSigMarshalled.toHexString()
-        } else {
-            throw TSSClientError("Problem with signature components")
-        }
+        let marshallSig =  r.serialize() + s.serialize() + Data([v])
+        return marshallSig.hexString
     }
 
     /// Calculates server coefficients based on the distributed key generation indexes and the user tss index
@@ -238,40 +228,59 @@ public class TSSHelpers {
     /// - Returns: `Data`
     ///
     /// - Throws: `TSSClientError`
-    public static func getFinalTssPublicKey(dkgPubKey: Data, userSharePubKey: Data, userTssIndex: BigInt) throws -> Data {
-        let serverLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: BigInt(1))
-        let userLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: userTssIndex)
-
-        guard let serverTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: dkgPubKey),
-              let userTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: userSharePubKey) else {
-            throw TSSClientError("InvalidPublicKey")
-        }
-
-        var serverTerm = serverTermUnprocessed
-        var userTerm = userTermUnprocessed
-
-        let serverLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(serverLagrangeCoeff.serialize())
-        let userLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(userLagrangeCoeff.serialize())
-
-        guard let serverTermProcessed = SECP256K1.ecdh(pubKey: serverTerm, privateKey: serverLagrangeCoeffData),
-              let userTermProcessed = SECP256K1.ecdh(pubKey: userTerm, privateKey: userLagrangeCoeffData) else {
-            throw TSSClientError("Failed to process server term")
-        }
-
-        serverTerm = serverTermProcessed
-        userTerm = userTermProcessed
-
-        guard let serializedServerTerm = SECP256K1.serializePublicKey(publicKey: &serverTerm),
-              let serializedUserTerm = SECP256K1.serializePublicKey(publicKey: &userTerm) else {
-            throw TSSClientError("Failed to process client term")
-        }
-
-        guard let combination = SECP256K1.combineSerializedPublicKeys(keys: [serializedServerTerm, serializedUserTerm]) else {
-            throw TSSClientError("Failed to combine keys")
-        }
-
-        return combination
-    }
+//    public static func getFinalTssPublicKey(dkgPubKey: Data, userSharePubKey: Data, userTssIndex: BigInt) throws -> Data {
+//        let serverLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: BigInt(1))
+//        let userLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: userTssIndex)
+//        
+//        let _serverTermUnprocessed = try curvelib.Secp256k1.PublicKey(input: dkgPubKey)
+//        let _userTermUnprocessed = try curvelib.Secp256k1.PublicKey(input: userSharePubKey)
+//        
+//        guard let serverTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: dkgPubKey),
+//              let userTermUnprocessed = SECP256K1.parsePublicKey(serializedKey: userSharePubKey) else {
+//            throw TSSClientError("InvalidPublicKey")
+//        }
+//
+//        var serverTerm = serverTermUnprocessed
+//        var userTerm = userTermUnprocessed
+//
+//        let serverLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(serverLagrangeCoeff.serialize())
+//        let userLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(userLagrangeCoeff.serialize())
+//
+//        let serverLarganceCoeffPkey = try curvelib.Secp256k1.PrivateKey(input: serverLagrangeCoeffData)
+//        
+//        let userLagrangeCoeffPkey = try curvelib.Secp256k1.PrivateKey(input: userLagrangeCoeffData)
+//        
+//        let serverEcdh = try  curvelib.Secp256k1.ecdh(privateKey: serverLarganceCoeffPkey, publicKey: _serverTermUnprocessed)
+//        
+//        let userEcdh = try curvelib.Secp256k1.ecdh(privateKey: userLagrangeCoeffPkey, publicKey: _userTermUnprocessed)
+//        
+//        let serverEcdhPkey = try curvelib.Secp256k1.PublicKey.fromPrivateKey(privateKey: serverEcdh)
+//        let userEcdhPkey = try curvelib.Secp256k1.PublicKey.fromPrivateKey(privateKey: userEcdh)
+//        
+//        
+//        let combined = try curvelib.Secp256k1.PublicKey.combine(publicKeys: [serverEcdhPkey, userEcdhPkey])
+//        
+//        guard let serverTermProcessed = SECP256K1.ecdh(pubKey: serverTerm, privateKey: serverLagrangeCoeffData),
+//              let userTermProcessed = SECP256K1.ecdh(pubKey: userTerm, privateKey: userLagrangeCoeffData) else {
+//            throw TSSClientError("Failed to process server term")
+//        }
+//
+//        serverTerm = serverTermProcessed
+//        userTerm = userTermProcessed
+//
+//        guard let serializedServerTerm = SECP256K1.serializePublicKey(publicKey: &serverTerm),
+//              let serializedUserTerm = SECP256K1.serializePublicKey(publicKey: &userTerm) else {
+//            throw TSSClientError("Failed to process client term")
+//        }
+//        print(serializedServerTerm.hexString)
+//        
+//        
+//        
+//        guard let combination = SECP256K1.combineSerializedPublicKeys(keys: [serializedServerTerm, serializedUserTerm]) else {
+//            throw TSSClientError("Failed to combine keys")
+//        }
+//        return combination
+//    }
 
     internal static func getAdditiveCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTSSIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
         if isUser {
