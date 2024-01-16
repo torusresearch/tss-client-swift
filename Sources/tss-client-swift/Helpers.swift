@@ -74,7 +74,7 @@ public class TSSHelpers {
         
         let rPKey = try curvelib.Secp256k1.recoverPublicKey(rSignature: rSign, message: msgHash)
         
-        return try Data(hex: rPKey.getRaw())
+        return try Data(hex: rPKey.getSec1Full())
 
     }
 
