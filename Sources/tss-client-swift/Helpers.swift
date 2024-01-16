@@ -1,6 +1,6 @@
 import BigInt
-import CryptoKit
 import Foundation
+import CryptoSwift
 
 import curvelib
 
