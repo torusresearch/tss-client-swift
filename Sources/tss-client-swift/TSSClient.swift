@@ -271,7 +271,7 @@ public class TSSClient {
     /// - Returns: `(BigInt, BigInt, UInt8)`
     ///
     /// - Throws: `TSSClientError`,`DKLSError`
-    public func sign(message: String, hashOnly: Bool, original_message: String?, precompute: Precompute, signatures: [String]) throws -> (BigInt, BigInt, UInt8) {
+    public func sign(message: String, hashOnly: Bool, original_message: String?, precompute: Precompute, signatures: [String]) throws -> (Data, Data, UInt8) {
         if try isReady() == false {
             throw TSSClientError("Client is not ready")
         }
@@ -382,7 +382,8 @@ public class TSSClient {
         }
 
         consumed = true
-        return (s, r, recoveryParam)
+        
+        return (s.magnitude.serialize(), r.magnitude.serialize(), recoveryParam)
     }
 
     // returns a signature fragment for this signer
