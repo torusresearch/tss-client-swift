@@ -157,7 +157,7 @@ final class tss_client_swiftTests: XCTestCase {
         let privKeyBigInt = BigInt(sign: .plus, magnitude: privKeyBigUInt)
         let publicKey = try privKey.getPublicKey()
         try distributeShares(privKey: privKeyBigInt, parties: parties, endpoints: endpoints, localClientIndex: localClientIndex, session: session)
-        return try (privKey.rawData, Data(hex: publicKey.getRaw()) )
+        return try (privKey.rawData,  publicKey.getRaw() )
     }
 
     private func generateEndpoints(parties: Int, clientIndex: Int32) -> ([String?], [String?], [Int32]) {
@@ -218,7 +218,7 @@ final class tss_client_swiftTests: XCTestCase {
         _ = try! TSSHelpers.hexUncompressedPublicKey(pubKey: pk, return64Bytes: true)
         let pkHex65 = try! TSSHelpers.hexUncompressedPublicKey(pubKey: pk, return64Bytes: false)
         
-        let skToPkHex = try curvelib.Secp256k1.PrivateKey(input: privateKey).getPublicKey().getSec1Full()
+        let skToPkHex = try curvelib.Secp256k1.PrivateKey(input: privateKey).getPublicKey().getSec1Full().toHexString()
         XCTAssert(pkHex65 == skToPkHex)
 
         print(try! TSSHelpers.hexSignature(s: s, r: r, v: v))
