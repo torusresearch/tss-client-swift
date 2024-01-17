@@ -162,8 +162,8 @@ public class TSSHelpers {
     /// - Returns: `String`
     ///
     /// - Throws: `TSSClientError`
-    public static func hexSignature(s: BigInt, r: BigInt, v: UInt8) throws -> String {
-        let marshallSig =  r.serialize() + s.serialize() + Data([v])
+    public static func hexSignature(s: Data, r: Data, v: UInt8) throws -> String {
+        let marshallSig =  r + s + Data([v])
         return marshallSig.hexString
     }
 
@@ -218,6 +218,10 @@ public class TSSHelpers {
         return denormalizeShare
     }
 
+    
+    //
+    // Use TssModule.get_tss_pubkey instead
+    
     /// Calculates the public key that will be used for TSS signing.
     ///
     /// - Parameters:
