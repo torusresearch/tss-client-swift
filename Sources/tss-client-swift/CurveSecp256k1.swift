@@ -7,8 +7,7 @@ public struct CurveSecp256k1 {}
 
 extension CurveSecp256k1 {
     public static func ecdh(pubKey: PublicKey, privateKey: SecretKey) throws -> PublicKey {
-        try pubKey.mul_assign(key: privateKey)
-        return pubKey;
+        return try pubKey.mul(key: privateKey)
     }
 
     public static func signForRecovery(hash: String, privateKey: SecretKey) throws -> curvelib_swift.Signature {
