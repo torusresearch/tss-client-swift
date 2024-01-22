@@ -11,11 +11,11 @@ extension CurveSecp256k1 {
     }
 
     public static func signForRecovery(hash: String, privateKey: SecretKey) throws -> curvelib_swift.Signature {
-        return try ECDSA.sign_recoverable(key: privateKey, hash: hash)
+        return try ECDSA.signRecoverable(key: privateKey, hash: hash)
     }
 
     public static func privateToPublic(privateKey: SecretKey, compressed: Bool = false) throws -> String {
-        let publicKey = try privateKey.to_public()
+        let publicKey = try privateKey.toPublic()
         return try publicKey.serialize(compressed: compressed)
     }
 
@@ -30,7 +30,7 @@ extension CurveSecp256k1 {
 
     internal static func privateKeyToPublicKey(privateKey: String) throws -> PublicKey {
         let sk = try SecretKey(hex: privateKey)
-        return try sk.to_public()
+        return try sk.toPublic()
     }
 
     public static func serializePublicKey(publicKey: PublicKey, compressed: Bool = false) throws -> String {
@@ -51,7 +51,7 @@ extension CurveSecp256k1 {
 
     internal static func recoverableSign(hash: String, privateKey: String) throws -> curvelib_swift.Signature {
         let sk = try SecretKey(hex: privateKey)
-        return try ECDSA.sign_recoverable(key: sk, hash: hash)
+        return try ECDSA.signRecoverable(key: sk, hash: hash)
     }
 
     public static func recoverPublicKey(hash: String, signature: String, compressed: Bool = false) throws -> String {
