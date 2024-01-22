@@ -1,4 +1,5 @@
 import Foundation
+import curvelib_swift
 #if canImport(dkls)
     import dkls
 #endif
@@ -7,7 +8,7 @@ internal final class ChaChaRng {
     private(set) var pointer: OpaquePointer?
 
     public init() throws {
-        let stateBytes = try CurveSecp256k1.generatePrivateKey()
+        let stateBytes = try SecretKey().serialize()
         let state = Data(hexString: stateBytes)!.base64EncodedString()
 
         var errorCode: Int32 = -1

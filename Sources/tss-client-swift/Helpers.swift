@@ -1,6 +1,7 @@
 import BigInt
 import curvelib_swift
 import CryptoKit
+import CryptoSwift
 import Foundation
 
 public class TSSHelpers {
@@ -78,7 +79,8 @@ public class TSSHelpers {
             throw TSSClientError("Invalid base64 encoded hash")
          }
         do {
-            let pk = try CurveSecp256k1.recoverPublicKey(hash: msgB64.hexString, signature: sigString, compressed: false)
+            let signature = try Signature(hex: sigString)
+            let pk = try ECDSA.recover(signature: signature, hash: msgB64.hexString).serialize(compressed: false)
             return pk
         } catch (_) {
             throw TSSClientError("Public key recover failed")
@@ -241,8 +243,8 @@ public class TSSHelpers {
         let serverLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: BigInt(1))
         let userLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: userTssIndex)
 
-        let serverTermUnprocessed = try CurveSecp256k1.parsePublicKey(serializedKey: dkgPubKey.toHexString())
-        let userTermUnprocessed = try CurveSecp256k1.parsePublicKey(serializedKey: userSharePubKey.toHexString())
+        let serverTermUnprocessed = try PublicKey(hex: dkgPubKey.toHexString())
+        let userTermUnprocessed = try PublicKey(hex: userSharePubKey.toHexString())
 
         var serverTerm = serverTermUnprocessed
         var userTerm = userTermUnprocessed
@@ -250,9 +252,9 @@ public class TSSHelpers {
         let serverLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(serverLagrangeCoeff.serialize())
         let userLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(userLagrangeCoeff.serialize())
 
-        let serverTermProcessed = try CurveSecp256k1.ecdh(pubKey: serverTerm, privateKey: try SecretKey(hex: serverLagrangeCoeffData.toHexString()))
+        let serverTermProcessed = try PublicKey(hex: ECDH.ecdhStandard(sk: SecretKey(hex: serverLagrangeCoeffData.toHexString()), pk: serverTerm))
         
-        let userTermProcessed = try CurveSecp256k1.ecdh(pubKey: userTerm, privateKey: SecretKey(hex: userLagrangeCoeffData.toHexString()))
+        let userTermProcessed = try PublicKey(hex: ECDH.ecdhStandard(sk: SecretKey(hex: userLagrangeCoeffData.toHexString()), pk: userTerm))
 
         serverTerm = serverTermProcessed
         userTerm = userTermProcessed
@@ -261,9 +263,9 @@ public class TSSHelpers {
         try collection.insert(key: serverTermProcessed)
         try collection.insert(key: userTermProcessed)
 
-        let combination =  try CurveSecp256k1.combineSerializedPublicKeys(keys: collection)
+        let combination =  try PublicKey.combine(collection: collection)
 
-        return Data(hexString: combination)!
+        return Data(hexString: try combination.serialize(compressed: false))!
     }
 
     internal static func getAdditiveCoefficient(isUser: Bool, participatingServerIndexes: [BigInt], userTSSIndex: BigInt, serverIndex: BigInt?) throws -> BigInt {
