@@ -1,5 +1,5 @@
 import Foundation
-import curvelib_swift
+import curveSecp256k1
 #if canImport(dkls)
     import dkls
 #endif

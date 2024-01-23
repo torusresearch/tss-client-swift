@@ -1,6 +1,6 @@
 import BigInt
 import tss_client_swift
-import curvelib_swift
+import curveSecp256k1
 import XCTest
 
 final class tss_client_swiftTests: XCTestCase {

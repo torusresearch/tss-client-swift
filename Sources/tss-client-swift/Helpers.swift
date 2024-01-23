@@ -1,8 +1,8 @@
 import BigInt
-import curvelib_swift
 import CryptoKit
 import CryptoSwift
 import Foundation
+import curveSecp256k1
 
 public class TSSHelpers {
     // singleton class
