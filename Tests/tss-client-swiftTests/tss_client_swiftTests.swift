@@ -1,5 +1,6 @@
 import BigInt
 import tss_client_swift
+import curveSecp256k1
 import XCTest
 
 final class tss_client_swiftTests: XCTestCase {
@@ -37,12 +38,10 @@ final class tss_client_swiftTests: XCTestCase {
             let hash = TSSHelpers.hashMessage(message: token)
             let data = hash.data(using: .utf8)!
             let msgB64 = Data(base64Encoded: data)!
-            let (serializedNodeSig, _) = SECP256K1.signForRecovery(hash: msgB64, privateKey: Data(hex: item))
-            let unmarshaled = SECP256K1.unmarshalSignature(signatureData: serializedNodeSig!)!
-            let sig = unmarshaled.r.hexString + unmarshaled.s.hexString + String(format: "%02X", unmarshaled.v)
+            let serializedNodeSig = try ECDSA.signRecoverable(key: SecretKey(hex: item), hash: msgB64.hexString).serialize()
             let msg: [String: Any] = [
                 "data": token,
-                "sig": sig,
+                "sig": serializedNodeSig,
             ]
             let jsonData = String(decoding: try JSONSerialization.data(withJSONObject: msg), as: UTF8.self)
             sigs.append(jsonData)
@@ -76,8 +75,8 @@ final class tss_client_swiftTests: XCTestCase {
         var additiveShares: [BigInt] = []
         var shareSum = BigInt.zero
         for _ in 0 ..< (parties.count - 1) {
-            let shareBigUint = BigUInt(SECP256K1.generatePrivateKey()!)
-            let shareBigInt = BigInt(sign: .plus, magnitude: shareBigUint)
+            let shareBigUint = BigUInt(try SecretKey().serialize(), radix: 16)
+            let shareBigInt = BigInt(sign: .plus, magnitude: shareBigUint!)
             additiveShares.append(shareBigInt)
             shareSum += shareBigInt
         }
@@ -145,12 +144,12 @@ final class tss_client_swiftTests: XCTestCase {
 
     private func setupMockShares(endpoints: [String?], parties: [Int32], localClientIndex: Int32, session: String) throws -> (Data, Data)
     {
-        let privKey = SECP256K1.generatePrivateKey()!
-        let privKeyBigUInt = BigUInt(privKey)
-        let privKeyBigInt = BigInt(sign: .plus, magnitude: privKeyBigUInt)
-        let publicKey = SECP256K1.privateToPublic(privateKey: privKey, compressed: false)!
+        let privKey = SecretKey()
+        let privKeyBigUInt = BigUInt(try privKey.serialize(), radix: 16)
+        let privKeyBigInt = BigInt(sign: .plus, magnitude: privKeyBigUInt!)
+        let publicKey = try privKey.toPublic()
         try distributeShares(privKey: privKeyBigInt, parties: parties, endpoints: endpoints, localClientIndex: localClientIndex, session: session)
-        return (privKey, publicKey)
+        return (Data(hexString: try privKey.serialize())!, Data(hexString: try publicKey.serialize(compressed: false))!)
     }
 
     private func generateEndpoints(parties: Int, clientIndex: Int32) -> ([String?], [String?], [Int32]) {
@@ -178,8 +177,8 @@ final class tss_client_swiftTests: XCTestCase {
         let msg = "hello world"
         let msgHash = TSSHelpers.hashMessage(message: msg)
         let clientIndex = Int32(parties - 1)
-        let randomKey = BigUInt(SECP256K1.generatePrivateKey()!)
-        let random = BigInt(sign: .plus, magnitude: randomKey) + BigInt(Date().timeIntervalSince1970)
+        let randomKey = BigUInt(try SecretKey().serialize(), radix: 16)
+        let random = BigInt(sign: .plus, magnitude: randomKey!) + BigInt(Date().timeIntervalSince1970)
         let randomNonce = TSSHelpers.hashMessage(message: String(random))
         let testingRouteIdentifier = "testingShares"
         let vid = "test_verifier_name" + Delimiters.Delimiter1 + "test_verifier_id"
@@ -206,9 +205,9 @@ final class tss_client_swiftTests: XCTestCase {
         XCTAssert(TSSHelpers.verifySignature(msgHash: msgHash, s: s, r: r, v: v, pubKey: publicKey))
 
         let pk = try! TSSHelpers.recoverPublicKey(msgHash: msgHash, s: s, r: r, v: v)
-        _ = try! TSSHelpers.hexUncompressedPublicKey(pubKey: pk, return64Bytes: true)
-        let pkHex65 = try! TSSHelpers.hexUncompressedPublicKey(pubKey: pk, return64Bytes: false)
-        let skToPkHex = SECP256K1.privateToPublic(privateKey: privateKey)!.hexString
+        _ = try! TSSHelpers.hexUncompressedPublicKey(pubKey: Data(hexString:pk)!, return64Bytes: true)
+        let pkHex65 = try! TSSHelpers.hexUncompressedPublicKey(pubKey: Data(hexString:pk)!, return64Bytes: false)
+        let skToPkHex = try SecretKey(hex: privateKey.hexString).toPublic().serialize(compressed: false)
         XCTAssert(pkHex65 == skToPkHex)
 
         print(try! TSSHelpers.hexSignature(s: s, r: r, v: v))
