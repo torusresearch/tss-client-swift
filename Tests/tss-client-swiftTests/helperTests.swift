@@ -5,7 +5,7 @@ import BigInt
 
 final class helpersTests: XCTestCase {
     func testGetLangrange () throws {
-        let result = try! TSSHelpers.getLagrangeCoefficient(parties: [BigInt(50), BigInt(100)], party:  BigInt(10)).serialize().suffix(32).toHexString()
+        let result = try! TSSHelpers.getLagrangeCoefficient(parties: [BigInt(50), BigInt(100)], party:  BigInt(10)).serialize().suffix(32).hexString
         let expected = "f1c71c71c71c71c71c71c71c71c71c7093de09848919ecaa352a3cda52dde84d".addLeading0sForLength64()
         XCTAssertEqual(result, expected)
     }
@@ -13,7 +13,7 @@ final class helpersTests: XCTestCase {
     func testGetAdditiveCoefficient () throws {
         let result = try TSSHelpers.getAdditiveCoefficient(isUser: true, participatingServerIndexes: [BigInt(100), BigInt(200), BigInt(300)], userTSSIndex: BigInt(10), serverIndex: nil)
         let expected = "71c71c71c71c71c71c71c71c71c71c7136869b1131759c8c55410d93eac2c7ab".addLeading0sForLength64()
-        XCTAssertEqual(result.serialize().suffix(32).toHexString(), expected)
+        XCTAssertEqual(result.serialize().suffix(32).hexString, expected)
         
         let coeff = try TSSHelpers.getAdditiveCoefficient(isUser: false, participatingServerIndexes: [BigInt(1), BigInt(4), BigInt(5)], userTSSIndex: BigInt(3), serverIndex: BigInt(1))
         let compare = BigInt("7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a3", radix: 16)
@@ -23,13 +23,13 @@ final class helpersTests: XCTestCase {
     func testGetDenormaliseCoefficient () throws {
         let result = try TSSHelpers.getDenormalizedCoefficient(party: BigInt(100), parties: [BigInt(100), BigInt(200)])
         let expected = "7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1".addLeading0sForLength64()
-        XCTAssertEqual(result.serialize().suffix(32).toHexString(), expected)
+        XCTAssertEqual(result.serialize().suffix(32).hexString, expected)
     }
 
     func testGetDKLSCoeff () throws {
         let result = try TSSHelpers.getDKLSCoefficient(isUser: true, participatingServerIndexes:  [BigInt(100), BigInt(200)], userTssIndex: BigInt(100), serverIndex: nil)
         let expected = "a57eb50295fad40a57eb50295fad40a4ac66b301bc4dfafaaa8d2b05b28fae1".addLeading0sForLength64()
-        XCTAssertEqual(result.serialize().suffix(32).toHexString(), expected)
+        XCTAssertEqual(result.serialize().suffix(32).hexString, expected)
         
         let dklsCoeff = try TSSHelpers.getDKLSCoefficient(isUser: true, participatingServerIndexes: [BigInt(1), BigInt(4), BigInt(5)], userTssIndex: BigInt(3), serverIndex: nil)
         let compare = BigInt("7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a1", radix: 16)
@@ -60,7 +60,7 @@ final class helpersTests: XCTestCase {
     }
     
     func testDenormalizeShare () throws {
-        let share = BigUInt(Data(hex: "18db3574e4217154769ad9cd88900e7f1c198aa60a1379f3869ba8a7699e6b53"))
+        let share = BigUInt(Data(hexString:  "18db3574e4217154769ad9cd88900e7f1c198aa60a1379f3869ba8a7699e6b53")!)
         let denormalize2 = try TSSHelpers.denormalizeShare(participatingServerDKGIndexes: [BigInt(1), BigInt(2), BigInt(3) ], userTssIndex: BigInt(2), userTssShare: BigInt(sign: .plus, magnitude: share))
         let denormalize3 = try TSSHelpers.denormalizeShare(participatingServerDKGIndexes: [BigInt(1), BigInt(2), BigInt(3) ], userTssIndex: BigInt(3), userTssShare: BigInt(sign: .plus, magnitude: share))
 
@@ -81,7 +81,7 @@ final class helpersTests: XCTestCase {
         
         let tssPub = try TSSHelpers.getFinalTssPublicKey(dkgPubKey: dkgpub, userSharePubKey: userpub, userTssIndex: BigInt(2))
         
-        XCTAssertEqual(tssPub.toHexString(), "04dd1619c7e99eb665e37c74828762e6a677511d4c52656ddc6499a57d486bddb8c0dc63b229ec9a31f4216138c3fbb67ac2630831135aecbaf0aafa095e439c61")
+        XCTAssertEqual(tssPub.hexString, "04dd1619c7e99eb665e37c74828762e6a677511d4c52656ddc6499a57d486bddb8c0dc63b229ec9a31f4216138c3fbb67ac2630831135aecbaf0aafa095e439c61")
     }
     
     func testRemoveZeroTest() throws{

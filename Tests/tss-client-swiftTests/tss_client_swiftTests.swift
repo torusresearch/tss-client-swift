@@ -35,7 +35,7 @@ final class tss_client_swiftTests: XCTestCase {
 
         var sigs: [String] = []
         for item in privateKeys {
-            let hash = TSSHelpers.hashMessage(message: token)
+            let hash = try TSSHelpers.hashMessage(message: token)
             let data = hash.data(using: .utf8)!
             let msgB64 = Data(base64Encoded: data)!
             let serializedNodeSig = try ECDSA.signRecoverable(key: SecretKey(hex: item), hash: msgB64.hexString).serialize()
@@ -87,7 +87,7 @@ final class tss_client_swiftTests: XCTestCase {
         let reduced = additiveShares.reduce(0) {
             ($0 + $1).modulus(TSSClient.modulusValueSigned)
         }
-        XCTAssert(reduced.serialize().toHexString() == privKey.serialize().toHexString())
+        XCTAssert(reduced.serialize().hexString == privKey.serialize().hexString)
 
         // denormalize shares
         var shares: [BigInt] = []
@@ -175,11 +175,11 @@ final class tss_client_swiftTests: XCTestCase {
     func testClientLocal() throws {
         let parties = 4
         let msg = "hello world"
-        let msgHash = TSSHelpers.hashMessage(message: msg)
+        let msgHash = try TSSHelpers.hashMessage(message: msg)
         let clientIndex = Int32(parties - 1)
         let randomKey = BigUInt(try SecretKey().serialize(), radix: 16)
         let random = BigInt(sign: .plus, magnitude: randomKey!) + BigInt(Date().timeIntervalSince1970)
-        let randomNonce = TSSHelpers.hashMessage(message: String(random))
+        let randomNonce = try TSSHelpers.hashMessage(message: String(random))
         let testingRouteIdentifier = "testingShares"
         let vid = "test_verifier_name" + Delimiters.Delimiter1 + "test_verifier_id"
         let session = testingRouteIdentifier +

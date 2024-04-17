@@ -288,7 +288,7 @@ public class TSSClient {
 
         if !hashOnly {
             if let original_message = original_message {
-                if TSSHelpers.hashMessage(message: original_message) != message {
+                if try TSSHelpers.hashMessage(message: original_message) != message {
                     throw TSSClientError("hash of original message does not match message")
                 }
             } else {
@@ -367,10 +367,10 @@ public class TSSClient {
         let precompute_r = try precompute.getR()
         let decoded_r = try Data(base64Encoded: precompute_r) ?? { throw TSSClientError("R from precompute could not be decoded") }()
         let decoded = try Data(base64Encoded: signature) ?? { throw TSSClientError("Signature could not be decoded") }()
-        let sighex = decoded.toHexString()
+        let sighex = decoded.hexString
         let r = try BigInt(sighex.prefix(64), radix: 16) ?? { throw TSSClientError("R component for signature is not valid") }()
         var s = try BigInt(sighex.suffix(from: sighex.index(sighex.startIndex, offsetBy: 64)), radix: 16) ?? { throw TSSClientError("S component for signature is not valid") }()
-        let v = try decoded_r.bytes.last ?? { throw TSSClientError("V component for signature is not valid") }()
+        let v = try decoded_r.last ?? { throw TSSClientError("V component for signature is not valid") }()
         var recoveryParam = UInt8(v % 2)
 
         if _sLessThanHalf {
