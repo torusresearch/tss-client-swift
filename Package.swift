@@ -11,8 +11,7 @@ let package = Package(
     ],
     dependencies: [
         .package(name: "BigInt", url: "https://github.com/attaswift/BigInt.git", from: "5.3.0"),
-        .package(name: "CryptoSwift", url: "https://github.com/krzyzanowskim/CryptoSwift.git",from: "1.7.2"),
-        .package(name: "curvelib.swift", url: "https://github.com/tkey/curvelib.swift", from: "0.1.1"),
+        .package(name: "curvelib.swift", url: "https://github.com/tkey/curvelib.swift", from: "1.0.0"),
         .package(name: "SocketIO", url: "https://github.com/socketio/socket.io-client-swift", .upToNextMajor(from: "16.0.1")),
     ],
     targets: [
@@ -25,7 +24,7 @@ let package = Package(
         ),
         .target(
             name: "tss-client-swift",
-            dependencies: ["BigInt", "CryptoSwift", .product(name: "curveSecp256k1", package: "curvelib.swift"), "SocketIO", "dkls"]),
+            dependencies: ["BigInt", .product(name: "curveSecp256k1", package: "curvelib.swift"), "SocketIO", "dkls"]),
         .testTarget(
             name: "tss-client-swiftTests",
             dependencies: ["tss-client-swift", "BigInt"]),

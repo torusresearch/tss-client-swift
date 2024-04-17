@@ -1,6 +1,5 @@
 import BigInt
 import CryptoKit
-import CryptoSwift
 import Foundation
 import curveSecp256k1
 
@@ -14,8 +13,9 @@ public class TSSHelpers {
     ///   - message: The message to be hashed.
     ///
     /// - Returns: `String`
-    public static func hashMessage(message: String) -> String {
-        let hash = Data(message.utf8).sha3(.keccak256)
+    public static func hashMessage(message: String) throws -> String {
+        let msg = Data(message.utf8)
+        let hash = try keccak256(data: msg)
         return hash.base64EncodedString()
     }
 
@@ -96,16 +96,16 @@ public class TSSHelpers {
     ///
     /// - Throws: `TSSClientError`
     public static func base64PublicKey(pubKey: Data) throws -> String {
-        if pubKey.bytes.count == 65 { // first byte is 04 prefix indicating uncompressed format, must be dropped for dkls
-            if pubKey.bytes.first == 04 {
-                return Data(pubKey.bytes.dropFirst()).base64EncodedString()
+        if pubKey.count == 65 { // first byte is 04 prefix indicating uncompressed format, must be dropped for dkls
+            if pubKey.first == 04 {
+                return Data(pubKey.dropFirst()).base64EncodedString()
             } else {
                 throw TSSClientError("Invalid public key bytes")
             }
         }
 
-        if pubKey.bytes.count == 64 {
-            return Data(pubKey.bytes).base64EncodedString()
+        if pubKey.count == 64 {
+            return Data(pubKey).base64EncodedString()
         }
 
         throw TSSClientError("Invalid public key bytes")
@@ -121,21 +121,21 @@ public class TSSHelpers {
     ///
     /// - Throws: `TSSClientError`
     public static func hexUncompressedPublicKey(pubKey: Data, return64Bytes: Bool) throws -> String {
-        if pubKey.bytes.count == 65 {
+        if pubKey.count == 65 {
             if return64Bytes {
-                if pubKey.bytes.first == 04 {
-                    return Data(pubKey.bytes.dropFirst()).hexString
+                if pubKey.first == 04 {
+                    return Data(pubKey.dropFirst()).hexString
                 } else {
                     throw TSSClientError("Invalid public key bytes")
                 }
             } else {
-                return Data(pubKey.bytes).hexString
+                return Data(pubKey).hexString
             }
         }
 
-        if pubKey.bytes.count == 64 {
+        if pubKey.count == 64 {
             if return64Bytes {
-                return Data(pubKey.bytes).hexString
+                return Data(pubKey).hexString
             } else { // first byte should be 04 prefix
                 let prefix: UInt8 = 4
                 var pk = Data(pubKey)
@@ -210,7 +210,7 @@ public class TSSHelpers {
     public static func getClientCoefficients(participatingServerDKGIndexes: [BigInt], userTssIndex: BigInt) throws -> String {
         let coeff = try getDKLSCoefficient(isUser: true, participatingServerIndexes: participatingServerDKGIndexes, userTssIndex: userTssIndex, serverIndex: nil)
 
-        return coeff.magnitude.serialize().toHexString()
+        return coeff.magnitude.serialize().hexString
     }
     
     /// Calculates client(user) denormalise Share based on the distributed key generation indexes and the user tss index
@@ -243,8 +243,8 @@ public class TSSHelpers {
         let serverLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: BigInt(1))
         let userLagrangeCoeff = try TSSHelpers.getLagrangeCoefficient(parties: [BigInt(1), userTssIndex], party: userTssIndex)
 
-        let serverTermUnprocessed = try PublicKey(hex: dkgPubKey.toHexString())
-        let userTermUnprocessed = try PublicKey(hex: userSharePubKey.toHexString())
+        let serverTermUnprocessed = try PublicKey(hex: dkgPubKey.hexString)
+        let userTermUnprocessed = try PublicKey(hex: userSharePubKey.hexString)
 
         var serverTerm = serverTermUnprocessed
         var userTerm = userTermUnprocessed
@@ -252,9 +252,9 @@ public class TSSHelpers {
         let serverLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(serverLagrangeCoeff.serialize())
         let userLagrangeCoeffData = try Data.ensureDataLengthIs32Bytes(userLagrangeCoeff.serialize())
 
-        let serverTermProcessed = try PublicKey(hex: ECDH.ecdhStandard(sk: SecretKey(hex: serverLagrangeCoeffData.toHexString()), pk: serverTerm))
+        let serverTermProcessed = try PublicKey(hex: ECDH.ecdhStandard(sk: SecretKey(hex: serverLagrangeCoeffData.hexString), pk: serverTerm))
         
-        let userTermProcessed = try PublicKey(hex: ECDH.ecdhStandard(sk: SecretKey(hex: userLagrangeCoeffData.toHexString()), pk: userTerm))
+        let userTermProcessed = try PublicKey(hex: ECDH.ecdhStandard(sk: SecretKey(hex: userLagrangeCoeffData.hexString), pk: userTerm))
 
         serverTerm = serverTermProcessed
         userTerm = userTermProcessed

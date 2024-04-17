@@ -11,21 +11,12 @@
         }
       },
       {
-        "package": "CryptoSwift",
-        "repositoryURL": "https://github.com/krzyzanowskim/CryptoSwift.git",
-        "state": {
-          "branch": null,
-          "revision": "32f641cf24fc7abc1c591a2025e9f2f572648b0f",
-          "version": "1.7.2"
-        }
-      },
-      {
         "package": "curvelib.swift",
         "repositoryURL": "https://github.com/tkey/curvelib.swift",
         "state": {
           "branch": null,
-          "revision": "7dad3bf1793de263f83406c08c18c9316abf082f",
-          "version": "0.1.2"
+          "revision": "2df9f638fd121b445ce3b410cd79ac4d0cfa94ed",
+          "version": "1.0.0"
         }
       },
       {
