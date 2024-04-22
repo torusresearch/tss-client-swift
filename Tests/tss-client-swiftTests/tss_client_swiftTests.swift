@@ -1,5 +1,5 @@
 import BigInt
-import tss_client_swift
+import tssClientSwift
 import curveSecp256k1
 import XCTest
 
