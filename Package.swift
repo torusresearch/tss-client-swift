@@ -24,7 +24,8 @@ let package = Package(
         ),
         .target(
             name: "tssClientSwift",
-            dependencies: ["BigInt", .product(name: "curveSecp256k1", package: "curvelib.swift"), "SocketIO", "dkls"]),
+            dependencies: ["BigInt", .product(name: "curveSecp256k1", package: "curvelib.swift"), "SocketIO", "dkls"],
+            path: "Sources/tssClientSwift"),
         .testTarget(
             name: "tss-client-swiftTests",
             dependencies: ["tssClientSwift", "BigInt"]),
