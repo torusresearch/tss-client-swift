@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "tss-client-swift"
-  spec.version      = "6.0.0"
+  spec.version      = "5.0.0"
   spec.ios.deployment_target = '13.0'
   spec.summary      = "MPC TSS Client"
   spec.homepage     = "https://web3auth.io/"
