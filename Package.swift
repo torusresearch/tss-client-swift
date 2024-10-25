@@ -12,7 +12,7 @@ let package = Package(
     dependencies: [
         .package(name: "BigInt", url: "https://github.com/attaswift/BigInt.git", from: "5.3.0"),
         .package(name: "curvelib.swift", url: "https://github.com/tkey/curvelib.swift", from: "2.0.0"),
-        .package(name: "SocketIO", url: "https://github.com/socketio/socket.io-client-swift", .upToNextMajor(from: "16.0.1")),
+        .package(name: "SocketIO", url: "https://github.com/socketio/socket.io-client-swift", from: "16.1.1"),
     ],
     targets: [
         .binaryTarget(name: "libdkls",

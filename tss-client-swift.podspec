@@ -12,7 +12,7 @@ Pod::Spec.new do |spec|
   spec.vendored_frameworks = "Sources/libdkls/libdkls.xcframework"
   spec.dependency 'curvelib.swift', '~> 2.0.0'
   spec.dependency 'BigInt', '~> 5.2.0'
-  spec.dependency 'Socket.IO-Client-Swift', '16.1.0'
+  spec.dependency 'Socket.IO-Client-Swift', '16.1.1'
   spec.dependency "Starscream", "4.0.6"
   spec.module_name = "tssClientSwift"
 end
