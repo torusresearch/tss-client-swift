@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "tss-client-swift"
-  spec.version      = "5.0.0"
+  spec.version      = "5.0.1"
   spec.ios.deployment_target = '13.0'
   spec.summary      = "MPC TSS Client"
   spec.homepage     = "https://web3auth.io/"
@@ -13,6 +13,6 @@ Pod::Spec.new do |spec|
   spec.dependency 'curvelib.swift', '~> 2.0.0'
   spec.dependency 'BigInt', '~> 5.2.0'
   spec.dependency 'Socket.IO-Client-Swift', '16.1.1'
-  spec.dependency "Starscream", "4.0.6"
+  spec.dependency "Starscream", "4.0.8"
   spec.module_name = "tssClientSwift"
 end
